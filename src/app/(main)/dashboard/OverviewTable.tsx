@@ -4,36 +4,12 @@ import Link from '@/components/common/Link';
 import { LoadingPanel } from '@/components/common/LoadingPanel';
 import { useMessages, useNavigation } from '@/components/hooks';
 import type { WebsiteOverviewData } from '@/components/hooks/queries/useWebsiteOverviewQuery';
-import { ChangeLabel } from '@/components/metrics/ChangeLabel';
 import { Favicon } from '@/index';
 import { decodePunycodeDomain, formatLongNumber } from '@/lib/format';
+import { Trend } from './Trend';
 
 function bounceRate({ visits, bounces }: { visits: number; bounces: number }) {
   return visits ? (Math.min(visits, bounces) / visits) * 100 : 0;
-}
-
-function Trend({
-  value,
-  previousValue,
-  formatValue = n => formatLongNumber(Math.abs(n)),
-  reverseColors,
-}: {
-  value: number;
-  previousValue?: number;
-  formatValue?: (n: number) => string;
-  reverseColors?: boolean;
-}) {
-  if (previousValue === undefined) {
-    return null;
-  }
-
-  const change = value - previousValue;
-
-  return (
-    <ChangeLabel value={change} size="sm" reverseColors={reverseColors}>
-      {`${change > 0 ? '+' : change < 0 ? '-' : ''}${formatValue(change)}`}
-    </ChangeLabel>
-  );
 }
 
 export function OverviewTable({

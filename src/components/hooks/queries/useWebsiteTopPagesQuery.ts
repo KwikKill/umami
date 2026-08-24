@@ -9,6 +9,7 @@ export interface WebsiteTopPage {
   pageviews: number;
   visitors: number;
   previousPageviews: number;
+  previousVisitors: number;
 }
 
 export function useWebsiteTopPagesQuery({

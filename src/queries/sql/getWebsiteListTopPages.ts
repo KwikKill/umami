@@ -10,6 +10,7 @@ export interface WebsiteListTopPage {
   pageviews: number;
   visitors: number;
   previousPageviews: number;
+  previousVisitors: number;
 }
 
 export async function getWebsiteListTopPages(
@@ -57,7 +58,8 @@ async function relationalQuery(
       website_event.url_path as "urlPath",
       count(*) filter (where website_event.created_at between {{startDate}} and {{endDate}}) as "pageviews",
       count(distinct website_event.session_id) filter (where website_event.created_at between {{startDate}} and {{endDate}}) as "visitors",
-      count(*) filter (where website_event.created_at between {{compareStartDate}} and {{compareEndDate}}) as "previousPageviews"
+      count(*) filter (where website_event.created_at between {{compareStartDate}} and {{compareEndDate}}) as "previousPageviews",
+      count(distinct website_event.session_id) filter (where website_event.created_at between {{compareStartDate}} and {{compareEndDate}}) as "previousVisitors"
     from website_event
     where website_event.website_id = any({{websiteIds}}::uuid[])
       and website_event.created_at between {{compareStartDate}} and {{endDate}}
@@ -90,7 +92,8 @@ async function clickhouseQuery(
       url_path as "urlPath",
       countIf(created_at between {startDate:DateTime64} and {endDate:DateTime64}) as "pageviews",
       uniqIf(session_id, created_at between {startDate:DateTime64} and {endDate:DateTime64}) as "visitors",
-      countIf(created_at between {compareStartDate:DateTime64} and {compareEndDate:DateTime64}) as "previousPageviews"
+      countIf(created_at between {compareStartDate:DateTime64} and {compareEndDate:DateTime64}) as "previousPageviews",
+      uniqIf(session_id, created_at between {compareStartDate:DateTime64} and {compareEndDate:DateTime64}) as "previousVisitors"
     from website_event
     where website_id in {websiteIds:Array(UUID)}
       and created_at between {compareStartDate:DateTime64} and {endDate:DateTime64}

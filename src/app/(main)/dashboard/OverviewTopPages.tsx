@@ -2,9 +2,9 @@ import { DataColumn, DataTable, Icon, Row, Text } from '@umami/react-zen';
 import Link from '@/components/common/Link';
 import { LoadingPanel } from '@/components/common/LoadingPanel';
 import { useMessages, useNavigation, useWebsiteTopPagesQuery } from '@/components/hooks';
-import { ChangeLabel } from '@/components/metrics/ChangeLabel';
 import { Favicon } from '@/index';
 import { formatLongNumber } from '@/lib/format';
+import { Trend } from './Trend';
 
 export interface OverviewTopPagesProps {
   teamId?: string;
@@ -46,22 +46,21 @@ export function OverviewTopPages({ teamId }: OverviewTopPagesProps) {
             </Text>
           )}
         </DataColumn>
-        <DataColumn id="visitors" label={t(labels.visitors)} align="end" width="120px">
-          {(row: any) => formatLongNumber(row.visitors)}
+        <DataColumn id="visitors" label={t(labels.visitors)} align="end" width="150px">
+          {(row: any) => (
+            <Row alignItems="center" justifyContent="flex-end" gap="2">
+              <Text>{formatLongNumber(row.visitors)}</Text>
+              <Trend value={row.visitors} previousValue={row.previousVisitors} />
+            </Row>
+          )}
         </DataColumn>
-        <DataColumn id="pageviews" label={t(labels.views)} align="end" width="120px">
-          {(row: any) => formatLongNumber(row.pageviews)}
-        </DataColumn>
-        <DataColumn id="trend" label={t(labels.trend)} align="end" width="100px">
-          {(row: any) => {
-            const change = row.pageviews - row.previousPageviews;
-
-            return (
-              <ChangeLabel value={change} size="sm">
-                {`${change > 0 ? '+' : change < 0 ? '-' : ''}${formatLongNumber(Math.abs(change))}`}
-              </ChangeLabel>
-            );
-          }}
+        <DataColumn id="pageviews" label={t(labels.views)} align="end" width="150px">
+          {(row: any) => (
+            <Row alignItems="center" justifyContent="flex-end" gap="2">
+              <Text>{formatLongNumber(row.pageviews)}</Text>
+              <Trend value={row.pageviews} previousValue={row.previousPageviews} />
+            </Row>
+          )}
         </DataColumn>
       </DataTable>
     </LoadingPanel>
