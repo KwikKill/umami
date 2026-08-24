@@ -46,16 +46,17 @@ async function relationalQuery(
         cast(coalesce(sum(t.c), 0) as bigint) as "pageviews",
         count(distinct t.session_id) as "visitors",
         count(distinct t.visit_id) as "visits",
-        ${excludeBounce ? '0' : 'coalesce(sum(case when t.c = 1 and t.has_custom_event = 0 then 1 else 0 end), 0)'} as "bounces",
+        ${excludeBounce ? '0' : 'coalesce(sum(case when t.c = 1 and t.has_custom_event = 0 and t.has_heartbeat = 0 then 1 else 0 end), 0)'} as "bounces",
         cast(coalesce(sum(${getTimestampDiffSQL('t.min_time', 't.max_time')}), 0) as bigint) as "totaltime"
       from (
         select
           website_event.session_id,
           website_event.visit_id,
-          sum(case when website_event.event_type NOT IN (2, 5) then 1 else 0 end) as "c",
+          sum(case when website_event.event_type NOT IN (2, 5, 6) then 1 else 0 end) as "c",
           min(case when website_event.event_type NOT IN (2, 5) then website_event.created_at end) as "min_time",
           max(case when website_event.event_type NOT IN (2, 5) then website_event.created_at end) as "max_time",
-          max(case when website_event.event_type = ${EVENT_TYPE.customEvent} then 1 else 0 end) as "has_custom_event"
+          max(case when website_event.event_type = ${EVENT_TYPE.customEvent} then 1 else 0 end) as "has_custom_event",
+          max(case when website_event.event_type = ${EVENT_TYPE.heartbeat} then 1 else 0 end) as "has_heartbeat"
         from website_event
         ${cohortQuery}
         ${excludeBounceQuery}
@@ -65,7 +66,7 @@ async function relationalQuery(
           and website_event.event_type != ${EVENT_TYPE.performance}
           ${filterQuery}
         group by 1, 2
-        having sum(case when website_event.event_type NOT IN (2, 5) then 1 else 0 end) > 0
+        having sum(case when website_event.event_type NOT IN (2, 5, 6) then 1 else 0 end) > 0
       ) as t
       `,
       queryParams,
@@ -75,16 +76,20 @@ async function relationalQuery(
 
   const bounceQuery = excludeBounce
     ? '0'
-    : 'coalesce(sum(case when t.c = 1 and coalesce(e.has_custom_event, 0) = 0 then 1 else 0 end), 0)';
+    : 'coalesce(sum(case when t.c = 1 and coalesce(e.has_custom_event, 0) = 0 and coalesce(e.has_heartbeat, 0) = 0 then 1 else 0 end), 0)';
   const visitEventsJoin = excludeBounce
     ? ''
     : `
       left join (
-        select session_id, visit_id, 1 as "has_custom_event"
+        select
+          session_id,
+          visit_id,
+          max(case when event_type = ${EVENT_TYPE.customEvent} then 1 else 0 end) as "has_custom_event",
+          max(case when event_type = ${EVENT_TYPE.heartbeat} then 1 else 0 end) as "has_heartbeat"
         from website_event
         where website_id = {{websiteId::uuid}}
           and created_at between {{startDate}} and {{endDate}}
-          and event_type = ${EVENT_TYPE.customEvent}
+          and event_type in (${EVENT_TYPE.customEvent}, ${EVENT_TYPE.heartbeat})
         group by 1, 2
       ) as e
         on e.session_id = t.session_id
@@ -102,7 +107,7 @@ async function relationalQuery(
       select
         website_event.session_id,
         website_event.visit_id,
-        count(*) as "c",
+        sum(case when website_event.event_type NOT IN (2, 5, 6) then 1 else 0 end) as "c",
         min(website_event.created_at) as "min_time",
         max(website_event.created_at) as "max_time"
       from website_event
@@ -139,7 +144,7 @@ async function clickhouseQuery(
     !!filters.eventPropertyFilters?.length;
   const bounceQuery = excludeBounce
     ? '0'
-    : 'sumIf(1, t.c = 1 and t.has_custom_event = 0)';
+    : 'sumIf(1, t.c = 1 and t.has_custom_event = 0 and t.has_heartbeat = 0)';
 
   if (hasEventFilters) {
     sql = `
@@ -147,13 +152,13 @@ async function clickhouseQuery(
       sum(t.c) as "pageviews",
       uniq(t.session_id) as "visitors",
       uniq(t.visit_id) as "visits",
-      ${excludeBounce ? '0' : 'sumIf(1, t.c = 1 and ifNull(e.has_custom_event, 0) = 0)'} as "bounces",
+      ${excludeBounce ? '0' : 'sumIf(1, t.c = 1 and ifNull(e.has_custom_event, 0) = 0 and ifNull(e.has_heartbeat, 0) = 0)'} as "bounces",
       sum(max_time-min_time) as "totaltime"
     from (
       select
         session_id,
         visit_id,
-        count(*) c,
+        sumIf(1, event_type NOT IN (2, 5, 6)) c,
         min(created_at) min_time,
         max(created_at) max_time
       from website_event
@@ -166,11 +171,15 @@ async function clickhouseQuery(
       group by session_id, visit_id
     ) as t
     ${excludeBounce ? '' : `left join (
-      select session_id, visit_id, toUInt8(1) as has_custom_event
+      select
+        session_id,
+        visit_id,
+        max(if(event_type = ${EVENT_TYPE.customEvent}, 1, 0)) as has_custom_event,
+        max(if(event_type = ${EVENT_TYPE.heartbeat}, 1, 0)) as has_heartbeat
       from website_event
       where website_id = {websiteId:UUID}
         and created_at between {startDate:DateTime64} and {endDate:DateTime64}
-        and event_type = ${EVENT_TYPE.customEvent}
+        and event_type in (${EVENT_TYPE.customEvent}, ${EVENT_TYPE.heartbeat})
       group by session_id, visit_id
     ) as e using (session_id, visit_id)`};
     `;
@@ -186,10 +195,11 @@ async function clickhouseQuery(
       select
         session_id,
         visit_id,
-        sum(views) c,
+        sumIf(views, event_type != ${EVENT_TYPE.heartbeat}) c,
         minIf(min_time, event_type NOT IN (2, 5)) min_time,
         maxIf(max_time, event_type NOT IN (2, 5)) max_time,
-        max(if(event_type = ${EVENT_TYPE.customEvent} and length(event_name) > 0, 1, 0)) has_custom_event
+        max(if(event_type = ${EVENT_TYPE.customEvent} and length(event_name) > 0, 1, 0)) has_custom_event,
+        max(if(event_type = ${EVENT_TYPE.heartbeat}, 1, 0)) has_heartbeat
         from website_event_stats_hourly "website_event"
         ${cohortQuery}
         ${excludeBounceQuery}

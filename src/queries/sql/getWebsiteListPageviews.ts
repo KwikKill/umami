@@ -47,7 +47,7 @@ async function relationalQuery(
     from website_event
     where website_event.website_id = any({{websiteIds}}::uuid[])
       and website_event.created_at between {{startDate}} and {{endDate}}
-      and website_event.event_type NOT IN (2, 5)
+      and website_event.event_type NOT IN (2, 5, 6)
     group by 1, 2
     order by 1, 2
     `,
@@ -79,7 +79,7 @@ async function clickhouseQuery(
       from website_event_stats_hourly as website_event
       where website_id in {websiteIds:Array(UUID)}
         and created_at between {startDate:DateTime64} and {endDate:DateTime64}
-        and event_type NOT IN (2, 5)
+        and event_type NOT IN (2, 5, 6)
       group by website_id, t
     ) as g
     order by g.websiteId, g.t

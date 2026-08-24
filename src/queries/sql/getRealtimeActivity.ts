@@ -41,7 +41,7 @@ async function relationalQuery(websiteId: string, filters: QueryFilters) {
       on session.session_id = website_event.session_id
         and session.website_id = website_event.website_id
     where website_event.website_id = {{websiteId::uuid}}
-      and website_event.event_type != ${EVENT_TYPE.performance}
+      and website_event.event_type NOT IN (${EVENT_TYPE.performance}, ${EVENT_TYPE.heartbeat})
     ${filterQuery}
     ${dateQuery}
     order by website_event.created_at desc
@@ -78,7 +78,7 @@ async function clickhouseQuery(
         from website_event
         ${cohortQuery}
         where website_id = {websiteId:UUID}
-          and event_type != ${EVENT_TYPE.performance}
+          and event_type NOT IN (${EVENT_TYPE.performance}, ${EVENT_TYPE.heartbeat})
         ${filterQuery}
         ${dateQuery}
         order by createdAt desc

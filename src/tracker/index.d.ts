@@ -210,6 +210,8 @@ export type UmamiConfig = {
   release?: string;
   environment?: string;
   performance?: boolean;
+  /** Fork: periodic ping while the page is visible, for SPA bounce/duration. Defaults to true. */
+  heartbeat?: boolean;
   fetchCredentials?: RequestCredentials;
   [key: string]: unknown;
 };

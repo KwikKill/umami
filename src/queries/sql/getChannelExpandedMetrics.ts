@@ -50,7 +50,7 @@ async function relationalQuery(
     });
   const needsBounceEvents = filters.excludeBounce !== true;
   const bounceQuery = needsBounceEvents
-    ? `sum(case when visit_stats.c = 1 and coalesce(visit_events.has_custom_event, 0) = 0 then 1 else 0 end) as "bounces",`
+    ? `sum(case when visit_stats.c = 1 and coalesce(visit_events.has_custom_event, 0) = 0 and coalesce(visit_events.has_heartbeat, 0) = 0 then 1 else 0 end) as "bounces",`
     : '0 as "bounces",';
   const visitEventsQuery = needsBounceEvents
     ? `,
@@ -59,11 +59,12 @@ async function relationalQuery(
         select
           session_id,
           visit_id,
-          1 as has_custom_event
+          max(case when event_type = ${EVENT_TYPE.customEvent} then 1 else 0 end) as has_custom_event,
+          max(case when event_type = ${EVENT_TYPE.heartbeat} then 1 else 0 end) as has_heartbeat
         from website_event
         where website_id = {{websiteId::uuid}}
           and created_at between {{startDate}} and {{endDate}}
-          and event_type = ${EVENT_TYPE.customEvent}
+          and event_type in (${EVENT_TYPE.customEvent}, ${EVENT_TYPE.heartbeat})
         group by session_id, visit_id)`
     : '';
   const visitEventsJoin = needsBounceEvents
@@ -87,7 +88,8 @@ async function relationalQuery(
             website_event.visit_id,
             website_event.hostname,
             website_event.event_id,
-            website_event.created_at
+            website_event.created_at,
+            website_event.event_type
         from website_event
         ${cohortQuery}
         ${excludeBounceQuery}
@@ -140,7 +142,7 @@ async function relationalQuery(
         select
           session_id,
           visit_id,
-          count(*) as c,
+          sum(case when event_type NOT IN (2, 5, 6) then 1 else 0 end) as c,
           min(created_at) as min_time,
           max(created_at) as max_time
         from prefix
@@ -178,15 +180,19 @@ async function clickhouseQuery(
   });
   const needsBounceEvents = filters.excludeBounce !== true;
   const bounceQuery = needsBounceEvents
-    ? `sumIf(1, t.c = 1 and ifNull(e.has_custom_event, 0) = 0) as "bounces",`
+    ? `sumIf(1, t.c = 1 and ifNull(e.has_custom_event, 0) = 0 and ifNull(e.has_heartbeat, 0) = 0) as "bounces",`
     : '0 as "bounces",';
   const visitEventsJoin = needsBounceEvents
     ? `left join (
-      select session_id, visit_id, toUInt8(1) as has_custom_event
+      select
+        session_id,
+        visit_id,
+        max(if(event_type = ${EVENT_TYPE.customEvent}, 1, 0)) as has_custom_event,
+        max(if(event_type = ${EVENT_TYPE.heartbeat}, 1, 0)) as has_heartbeat
       from website_event
       where website_id = {websiteId:UUID}
         and created_at between {startDate:DateTime64} and {endDate:DateTime64}
-        and event_type = ${EVENT_TYPE.customEvent}
+        and event_type in (${EVENT_TYPE.customEvent}, ${EVENT_TYPE.heartbeat})
       group by session_id, visit_id
     ) as e using (session_id, visit_id)`
     : '';
@@ -205,7 +211,7 @@ async function clickhouseQuery(
         session_id,
         visit_id,
         coalesce(nullIf(argMin(name, tuple(if(name != '', 0, 1), created_at, event_id)), ''), 'direct') as name,
-        count(*) c,
+        sumIf(1, event_type NOT IN (2, 5, 6)) c,
         min(created_at) min_time,
         max(created_at) max_time
       from (
@@ -242,7 +248,8 @@ async function clickhouseQuery(
         session_id,
         visit_id,
         event_id,
-        created_at
+        created_at,
+        event_type
         from website_event
         ${cohortQuery}
         ${excludeBounceQuery}

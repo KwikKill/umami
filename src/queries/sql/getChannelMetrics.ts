@@ -50,7 +50,7 @@ async function relationalQuery(websiteId: string, filters: QueryFilters) {
       ${excludeBounceQuery}
       ${joinSessionQuery}
       where website_event.website_id = {{websiteId::uuid}}
-        and website_event.event_type NOT IN (2, 5)
+        and website_event.event_type NOT IN (2, 5, 6)
         ${dateQuery}
         ${filterQuery}),
 
@@ -158,7 +158,7 @@ async function clickhouseQuery(
       ${cohortQuery}
       ${excludeBounceQuery}
       where website_id = {websiteId:UUID}
-        and event_type NOT IN (2, 5)
+        and event_type NOT IN (2, 5, 6)
         ${dateQuery}
         ${filterQuery}
       )

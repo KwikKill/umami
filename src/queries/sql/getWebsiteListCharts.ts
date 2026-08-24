@@ -63,7 +63,7 @@ async function relationalQuery(
   const eventTypeQuery =
     eventType != null
       ? `and website_event.event_type = ${eventType}`
-      : `and website_event.event_type NOT IN (${EVENT_TYPE.customEvent}, ${EVENT_TYPE.performance})`;
+      : `and website_event.event_type NOT IN (${EVENT_TYPE.customEvent}, ${EVENT_TYPE.performance}, ${EVENT_TYPE.heartbeat})`;
   const bucketSql =
     timezone.toLowerCase() === 'utc'
       ? `
@@ -116,7 +116,7 @@ async function clickhouseQuery(
   const eventTypeQuery =
     eventType != null
       ? `and event_type = ${eventType}`
-      : `and event_type NOT IN (${EVENT_TYPE.customEvent}, ${EVENT_TYPE.performance})`;
+      : `and event_type NOT IN (${EVENT_TYPE.customEvent}, ${EVENT_TYPE.performance}, ${EVENT_TYPE.heartbeat})`;
   const localTime = `toTimeZone(website_event.created_at, '${timezone}')`;
   // Build the label from the local date and hour rather than adding hours to midnight, which
   // lands on 11:00 or 13:00 on a DST change day

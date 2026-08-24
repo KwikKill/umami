@@ -101,3 +101,13 @@ describe('collectionSchema timestamp', () => {
     expect(parse({ timestamp: 1e15 }).success).toBe(false);
   });
 });
+
+describe('collectionSchema heartbeat (fork)', () => {
+  test('accepts a heartbeat for a website', () => {
+    expect(parse({ url: '/docs' }, 'heartbeat').success).toBe(true);
+  });
+
+  test('still rejects unknown collection types', () => {
+    expect(parse({ url: '/docs' }, 'ping').success).toBe(false);
+  });
+});

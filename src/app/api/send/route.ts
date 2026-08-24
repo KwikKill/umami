@@ -119,6 +119,13 @@ export async function POST(request: Request) {
       claimSession: tryClaimAnonymousSession,
     });
 
+    // A heartbeat only extends a visit opened by a pageview. It must never open a
+    // session or a visit by itself (no cache yet, identity drift, or the visit
+    // window expired), otherwise it would produce visits with no pageview.
+    if (type === COLLECTION_TYPE.heartbeat && (!cache?.visitId || cache.visitId !== visitId)) {
+      return json({ cache: request.headers.get('x-umami-cache') ?? undefined });
+    }
+
     const shouldEnsureSession = !clickhouse.enabled && sessionDrift;
 
     // Create a session if not found
@@ -285,6 +292,34 @@ export async function POST(request: Request) {
           sessionId,
           sessionData: data,
           distinctId,
+          createdAt,
+        });
+      }
+    } else if (type === COLLECTION_TYPE.heartbeat) {
+      // Fork: periodic ping from the tracker while the page stays visible, so a
+      // long single-page visit is not counted as a bounce with ~0 duration.
+      // Website-only: there is no visit to extend for link/pixel redirects.
+      if (websiteId) {
+        const base = hostname ? `https://${hostname}` : 'https://localhost';
+        const currentUrl = new URL(url, base);
+        const urlPath = currentUrl.pathname === '/undefined' ? '' : currentUrl.pathname;
+        const urlDomain = currentUrl.hostname.replace(/^www\./, '');
+
+        await saveEvent({
+          websiteId: sourceId,
+          sessionId,
+          visitId,
+          urlPath: safeDecodeURI(urlPath),
+          hostname: hostname || urlDomain,
+          eventType: EVENT_TYPE.heartbeat,
+          browser,
+          os,
+          device,
+          screen,
+          language,
+          country,
+          region,
+          city,
           createdAt,
         });
       }

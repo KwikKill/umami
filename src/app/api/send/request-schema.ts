@@ -113,7 +113,7 @@ export const collectionSchema = z
   .discriminatedUnion('type', [
     errorCollectionSchema,
     z.object({
-      type: z.enum(['event', 'identify', 'performance']),
+      type: z.enum(['event', 'identify', 'performance', 'heartbeat']),
       payload: payloadSchema,
     }),
   ])

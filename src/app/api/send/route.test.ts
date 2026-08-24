@@ -1070,3 +1070,71 @@ describe('client salt', () => {
     expect(saveSessionLinkMock.mock.calls[0][0]).toMatchObject({ sessionId: anonBody.sessionId });
   });
 });
+
+describe('heartbeat (fork)', () => {
+  function makeCacheToken(overrides: Record<string, any> = {}) {
+    return createToken(
+      {
+        type: CACHE_TOKEN_TYPE,
+        websiteId: WEBSITE_ID,
+        sessionId: makeComputedSessionId(WEBSITE_ID),
+        visitId: 'cached-visit',
+        iat: Math.floor(Date.now() / 1000),
+        ...overrides,
+      },
+      secret(),
+    );
+  }
+
+  test('extends the cached visit with a heartbeat event', async () => {
+    const token = makeCacheToken();
+
+    const response = await callPOST(
+      {
+        type: 'heartbeat',
+        payload: { website: WEBSITE_ID, url: '/docs?ref=x', hostname: 'example.com' },
+      },
+      { headers: { 'x-umami-cache': token } },
+    );
+
+    expect(response.status).toBe(200);
+    expect(createSessionMock).not.toHaveBeenCalled();
+    expect(saveEventMock).toHaveBeenCalledTimes(1);
+    expect(saveEventMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        websiteId: WEBSITE_ID,
+        sessionId: makeComputedSessionId(WEBSITE_ID),
+        visitId: 'cached-visit',
+        eventType: EVENT_TYPE.heartbeat,
+        urlPath: '/docs',
+        hostname: 'example.com',
+      }),
+    );
+  });
+
+  test('never opens a session or a visit without a cached visit', async () => {
+    const response = await callPOST({
+      type: 'heartbeat',
+      payload: { website: WEBSITE_ID, url: '/' },
+    });
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({});
+    expect(createSessionMock).not.toHaveBeenCalled();
+    expect(saveEventMock).not.toHaveBeenCalled();
+  });
+
+  test('is ignored once the visit window has expired and keeps the client token', async () => {
+    const token = makeCacheToken({ iat: Math.floor(Date.now() / 1000) - 2000 });
+
+    const response = await callPOST(
+      { type: 'heartbeat', payload: { website: WEBSITE_ID, url: '/' } },
+      { headers: { 'x-umami-cache': token } },
+    );
+
+    expect(response.status).toBe(200);
+    expect((await response.json()).cache).toBe(token);
+    expect(createSessionMock).not.toHaveBeenCalled();
+    expect(saveEventMock).not.toHaveBeenCalled();
+  });
+});
