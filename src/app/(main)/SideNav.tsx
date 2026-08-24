@@ -28,20 +28,16 @@ import { Logo } from '@/components/svg';
 
 export function SideNav(props: any) {
   const { t, labels } = useMessages();
-  const { pathname, renderUrl, websiteId, teamId } = useNavigation();
+  const { pathname, renderUrl, websiteId } = useNavigation();
   const [isCollapsed] = useGlobalState('sidenav-collapsed', false);
 
   const links = [
-    ...(!teamId
-      ? [
-          {
-            id: 'dashboard',
-            label: t(labels.dashboard),
-            path: '/dashboard',
-            icon: <PanelsLeftBottom />,
-          },
-        ]
-      : []),
+    {
+      id: 'dashboard',
+      label: t(labels.dashboard),
+      path: '/dashboard',
+      icon: <PanelsLeftBottom />,
+    },
     {
       id: 'boards',
       label: t(labels.boards),
