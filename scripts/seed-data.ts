@@ -5,9 +5,12 @@
  * Umami Sample Data Generator
  *
  * Generates realistic analytics data for local development and testing.
- * Creates two demo websites:
- *   - Demo Blog: Low traffic (~100 sessions/month)
- *   - Demo SaaS: Average traffic (~500 sessions/day)
+ * Creates five demo websites:
+ *   - Demo Blog: Low traffic (~90 sessions/month)
+ *   - Demo SaaS: High traffic (~500 sessions/day) with revenue tracking
+ *   - Demo Docs: Moderate traffic (~60 sessions/day)
+ *   - Demo Marketing: Moderate traffic (~90 sessions/day)
+ *   - Demo Store: High-moderate traffic (~140 sessions/day) with revenue tracking
  *
  * Usage:
  *   npm run seed-data              # Generate 30 days of data
@@ -78,8 +81,11 @@ Examples:
   npm run seed-data -- --days 7 -v    # Generate 7 days with verbose output
 
 Generated Sites:
-  - Demo Blog:  Low traffic (~90 sessions/month)
-  - Demo SaaS:  Average traffic (~500 sessions/day) with revenue tracking
+  - Demo Blog:       Low traffic (~90 sessions/month)
+  - Demo SaaS:       High traffic (~500 sessions/day) with revenue tracking
+  - Demo Docs:       Moderate traffic (~60 sessions/day)
+  - Demo Marketing:  Moderate traffic (~90 sessions/day)
+  - Demo Store:      High-moderate traffic (~140 sessions/day) with revenue tracking
 
 Note:
   This script is blocked from running in production environments

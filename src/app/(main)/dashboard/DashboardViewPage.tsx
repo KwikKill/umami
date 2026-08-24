@@ -5,6 +5,7 @@ import { PageBody } from '@/components/common/PageBody';
 import { PageHeader } from '@/components/common/PageHeader';
 import { Panel } from '@/components/common/Panel';
 import { useMessages, useNavigation, useWebsiteOverviewQuery } from '@/components/hooks';
+import { OverviewChart } from './OverviewChart';
 import { OverviewControls } from './OverviewControls';
 import { OverviewMetricsBar } from './OverviewMetricsBar';
 import { OverviewTable } from './OverviewTable';
@@ -32,6 +33,9 @@ export function DashboardViewPage() {
               isFetching={isFetching}
               error={error}
             />
+            <Panel>
+              <OverviewChart websites={data?.websites || []} teamId={teamId} />
+            </Panel>
             <Panel>
               <OverviewTable
                 data={data?.websites}

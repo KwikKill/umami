@@ -22,6 +22,20 @@ import {
   getBlogSiteConfig,
 } from './sites/blog.js';
 import {
+  DOCS_SESSIONS_PER_DAY,
+  DOCS_WEBSITE_DOMAIN,
+  DOCS_WEBSITE_NAME,
+  getDocsJourney,
+  getDocsSiteConfig,
+} from './sites/docs.js';
+import {
+  getMarketingJourney,
+  getMarketingSiteConfig,
+  MARKETING_SESSIONS_PER_DAY,
+  MARKETING_WEBSITE_DOMAIN,
+  MARKETING_WEBSITE_NAME,
+} from './sites/marketing.js';
+import {
   getSaasJourney,
   getSaasSiteConfig,
   SAAS_SESSIONS_PER_DAY,
@@ -29,6 +43,14 @@ import {
   SAAS_WEBSITE_NAME,
   saasRevenueConfigs,
 } from './sites/saas.js';
+import {
+  getStoreJourney,
+  getStoreSiteConfig,
+  STORE_SESSIONS_PER_DAY,
+  STORE_WEBSITE_DOMAIN,
+  STORE_WEBSITE_NAME,
+  storeRevenueConfigs,
+} from './sites/store.js';
 import { formatNumber, generateDatesBetween, progressBar, subDays, uuid } from './utils.js';
 
 const BATCH_SIZE = 1000;
@@ -159,7 +181,13 @@ async function clearDemoData(prisma: PrismaClient): Promise<void> {
 
   const demoWebsites = await prisma.website.findMany({
     where: {
-      OR: [{ name: BLOG_WEBSITE_NAME }, { name: SAAS_WEBSITE_NAME }],
+      OR: [
+        { name: BLOG_WEBSITE_NAME },
+        { name: SAAS_WEBSITE_NAME },
+        { name: DOCS_WEBSITE_NAME },
+        { name: MARKETING_WEBSITE_NAME },
+        { name: STORE_WEBSITE_NAME },
+      ],
     },
     select: { id: true },
   });
@@ -322,9 +350,8 @@ export async function seed(config: SeedConfig): Promise<SeedResult> {
     const adminUserId = await findAdminUser(prisma);
     console.log(`  Using admin user: ${adminUserId}`);
 
-    // Generate Blog site (low traffic)
-    const blogResults = await generateSiteData(
-      prisma,
+    const siteConfigs: SiteGeneratorConfig[] = [
+      // Low traffic
       {
         name: BLOG_WEBSITE_NAME,
         domain: BLOG_WEBSITE_DOMAIN,
@@ -332,14 +359,7 @@ export async function seed(config: SeedConfig): Promise<SeedResult> {
         getSiteConfig: getBlogSiteConfig,
         getJourney: getBlogJourney,
       },
-      days,
-      adminUserId,
-      config.verbose,
-    );
-
-    // Generate SaaS site (high traffic)
-    const saasResults = await generateSiteData(
-      prisma,
+      // High traffic, with revenue
       {
         name: SAAS_WEBSITE_NAME,
         domain: SAAS_WEBSITE_DOMAIN,
@@ -348,17 +368,44 @@ export async function seed(config: SeedConfig): Promise<SeedResult> {
         getJourney: getSaasJourney,
         revenueConfigs: saasRevenueConfigs,
       },
-      days,
-      adminUserId,
-      config.verbose,
-    );
+      // Moderate traffic
+      {
+        name: DOCS_WEBSITE_NAME,
+        domain: DOCS_WEBSITE_DOMAIN,
+        sessionsPerDay: DOCS_SESSIONS_PER_DAY,
+        getSiteConfig: getDocsSiteConfig,
+        getJourney: getDocsJourney,
+      },
+      {
+        name: MARKETING_WEBSITE_NAME,
+        domain: MARKETING_WEBSITE_DOMAIN,
+        sessionsPerDay: MARKETING_SESSIONS_PER_DAY,
+        getSiteConfig: getMarketingSiteConfig,
+        getJourney: getMarketingJourney,
+      },
+      // High-moderate traffic, with revenue
+      {
+        name: STORE_WEBSITE_NAME,
+        domain: STORE_WEBSITE_DOMAIN,
+        sessionsPerDay: STORE_SESSIONS_PER_DAY,
+        getSiteConfig: getStoreSiteConfig,
+        getJourney: getStoreJourney,
+        revenueConfigs: storeRevenueConfigs,
+      },
+    ];
+
+    const siteResults = [];
+
+    for (const siteConfig of siteConfigs) {
+      siteResults.push(await generateSiteData(prisma, siteConfig, days, adminUserId, config.verbose));
+    }
 
     const result: SeedResult = {
-      websites: 2,
-      sessions: blogResults.sessions + saasResults.sessions,
-      events: blogResults.events + saasResults.events,
-      eventData: blogResults.eventData + saasResults.eventData,
-      revenue: blogResults.revenue + saasResults.revenue,
+      websites: siteConfigs.length,
+      sessions: siteResults.reduce((sum, r) => sum + r.sessions, 0),
+      events: siteResults.reduce((sum, r) => sum + r.events, 0),
+      eventData: siteResults.reduce((sum, r) => sum + r.eventData, 0),
+      revenue: siteResults.reduce((sum, r) => sum + r.revenue, 0),
     };
 
     console.log(`\n${'─'.repeat(50)}`);

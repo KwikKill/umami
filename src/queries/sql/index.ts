@@ -23,6 +23,7 @@ export * from './getChannelMetrics';
 export * from './getRealtimeActivity';
 export * from './getRealtimeData';
 export * from './getWebsiteListCharts';
+export * from './getWebsiteListPageviews';
 export * from './getWebsiteListStats';
 export * from './getValues';
 export * from './getWebsiteDateRange';

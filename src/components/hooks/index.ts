@@ -73,6 +73,7 @@ export * from './queries/useWebsiteExpandedMetricsQuery';
 export * from './queries/useWebsiteMetricsQuery';
 export * from './queries/useWebsitePageviewsQuery';
 export * from './queries/useWebsiteListChartsQuery';
+export * from './queries/useWebsiteOverviewPageviewsQuery';
 export * from './queries/useWebsiteOverviewQuery';
 export * from './queries/useWebsiteQuery';
 export * from './queries/useWebsiteSegmentQuery';
