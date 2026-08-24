@@ -95,6 +95,7 @@ export const labels: Record<string, string> = {
   refresh: 'label.refresh',
   page: 'label.page',
   pages: 'label.pages',
+  trend: 'label.trend',
   entry: 'label.entry',
   exit: 'label.exit',
   referrers: 'label.referrers',

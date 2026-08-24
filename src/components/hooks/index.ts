@@ -83,6 +83,7 @@ export * from './queries/useWebsiteSessionStatsQuery';
 export * from './queries/useWebsiteSessionsQuery';
 export * from './queries/useWebsiteSharesQuery';
 export * from './queries/useWebsiteStatsQuery';
+export * from './queries/useWebsiteTopPagesQuery';
 export * from './queries/useWebsitesQuery';
 export * from './queries/useWebsiteValuesQuery';
 export * from './queries/useWeeklyTrafficQuery';
