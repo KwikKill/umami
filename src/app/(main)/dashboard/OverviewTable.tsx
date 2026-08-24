@@ -4,8 +4,37 @@ import Link from '@/components/common/Link';
 import { LoadingPanel } from '@/components/common/LoadingPanel';
 import { useMessages, useNavigation } from '@/components/hooks';
 import type { WebsiteOverviewData } from '@/components/hooks/queries/useWebsiteOverviewQuery';
+import { ChangeLabel } from '@/components/metrics/ChangeLabel';
 import { Favicon } from '@/index';
 import { decodePunycodeDomain, formatLongNumber } from '@/lib/format';
+
+function bounceRate({ visits, bounces }: { visits: number; bounces: number }) {
+  return visits ? (Math.min(visits, bounces) / visits) * 100 : 0;
+}
+
+function Trend({
+  value,
+  previousValue,
+  formatValue = n => formatLongNumber(Math.abs(n)),
+  reverseColors,
+}: {
+  value: number;
+  previousValue?: number;
+  formatValue?: (n: number) => string;
+  reverseColors?: boolean;
+}) {
+  if (previousValue === undefined) {
+    return null;
+  }
+
+  const change = value - previousValue;
+
+  return (
+    <ChangeLabel value={change} size="sm" reverseColors={reverseColors}>
+      {`${change > 0 ? '+' : change < 0 ? '-' : ''}${formatValue(change)}`}
+    </ChangeLabel>
+  );
+}
 
 export function OverviewTable({
   data,
@@ -54,19 +83,47 @@ export function OverviewTable({
             </Text>
           )}
         </DataColumn>
-        <DataColumn id="visitors" label={t(labels.visitors)} align="end" width="120px">
-          {(row: WebsiteOverviewData) => formatLongNumber(row.visitors)}
+        <DataColumn id="visitors" label={t(labels.visitors)} align="end" width="150px">
+          {(row: WebsiteOverviewData) => (
+            <Row alignItems="center" justifyContent="flex-end" gap="2">
+              <Text>{formatLongNumber(row.visitors)}</Text>
+              <Trend value={row.visitors} previousValue={row.comparison?.visitors} />
+            </Row>
+          )}
         </DataColumn>
-        <DataColumn id="visits" label={t(labels.visits)} align="end" width="120px">
-          {(row: WebsiteOverviewData) => formatLongNumber(row.visits)}
+        <DataColumn id="visits" label={t(labels.visits)} align="end" width="150px">
+          {(row: WebsiteOverviewData) => (
+            <Row alignItems="center" justifyContent="flex-end" gap="2">
+              <Text>{formatLongNumber(row.visits)}</Text>
+              <Trend value={row.visits} previousValue={row.comparison?.visits} />
+            </Row>
+          )}
         </DataColumn>
-        <DataColumn id="pageviews" label={t(labels.views)} align="end" width="120px">
-          {(row: WebsiteOverviewData) => formatLongNumber(row.pageviews)}
+        <DataColumn id="pageviews" label={t(labels.views)} align="end" width="150px">
+          {(row: WebsiteOverviewData) => (
+            <Row alignItems="center" justifyContent="flex-end" gap="2">
+              <Text>{formatLongNumber(row.pageviews)}</Text>
+              <Trend value={row.pageviews} previousValue={row.comparison?.pageviews} />
+            </Row>
+          )}
         </DataColumn>
-        <DataColumn id="bounceRate" label={t(labels.bounceRate)} align="end" width="120px">
-          {(row: WebsiteOverviewData) =>
-            row.visits ? `${Math.round((Math.min(row.visits, row.bounces) / row.visits) * 100)}%` : '-'
-          }
+        <DataColumn id="bounceRate" label={t(labels.bounceRate)} align="end" width="150px">
+          {(row: WebsiteOverviewData) => {
+            const rate = bounceRate(row);
+            const previousRate = row.comparison ? bounceRate(row.comparison) : undefined;
+
+            return (
+              <Row alignItems="center" justifyContent="flex-end" gap="2">
+                <Text>{row.visits ? `${Math.round(rate)}%` : '-'}</Text>
+                <Trend
+                  value={rate}
+                  previousValue={previousRate}
+                  formatValue={n => `${Math.round(Math.abs(n))}%`}
+                  reverseColors
+                />
+              </Row>
+            );
+          }}
         </DataColumn>
       </DataTable>
     </LoadingPanel>

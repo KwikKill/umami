@@ -2,10 +2,7 @@ import { useDateParameters } from '@/components/hooks/useDateParameters';
 import { useApi } from '../useApi';
 import { useModified } from '../useModified';
 
-export interface WebsiteOverviewData {
-  id: string;
-  name: string;
-  domain: string;
+export interface WebsiteOverviewStats {
   pageviews: number;
   visitors: number;
   visits: number;
@@ -13,15 +10,17 @@ export interface WebsiteOverviewData {
   totaltime: number;
 }
 
+export interface WebsiteOverviewData extends WebsiteOverviewStats {
+  id: string;
+  name: string;
+  domain: string;
+  comparison?: WebsiteOverviewStats;
+}
+
 export interface WebsiteOverviewResponse {
   websites: WebsiteOverviewData[];
-  totals: {
-    pageviews: number;
-    visitors: number;
-    visits: number;
-    bounces: number;
-    totaltime: number;
-  };
+  totals: WebsiteOverviewStats;
+  totalsComparison?: WebsiteOverviewStats;
 }
 
 export function useWebsiteOverviewQuery({ teamId }: { teamId?: string } = {}) {

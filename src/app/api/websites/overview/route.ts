@@ -1,6 +1,6 @@
 import { fromZonedTime } from 'date-fns-tz';
 import { z } from 'zod';
-import { parseDateRange } from '@/lib/date';
+import { getCompareDate, parseDateRange } from '@/lib/date';
 import { parseRequest } from '@/lib/request';
 import { json, unauthorized } from '@/lib/response';
 import { timezoneParam } from '@/lib/schema';
@@ -42,8 +42,17 @@ export async function GET(request: Request) {
     ? new Date(query.endAt)
     : fromZonedTime(defaultRange.endDate, timezone);
 
+  const { startDate: compareStartDate, endDate: compareEndDate } = getCompareDate(
+    'prev',
+    startDate,
+    endDate,
+  );
+
   const websiteIds = websites.map(website => website.id);
-  const stats = await getWebsiteListStats(websiteIds, { startDate, endDate });
+  const [stats, compareStats] = await Promise.all([
+    getWebsiteListStats(websiteIds, { startDate, endDate }),
+    getWebsiteListStats(websiteIds, { startDate: compareStartDate, endDate: compareEndDate }),
+  ]);
 
   return json({
     websites: websites.map(website => ({
@@ -51,7 +60,9 @@ export async function GET(request: Request) {
       name: website.name,
       domain: website.domain,
       ...stats[website.id],
+      comparison: compareStats[website.id],
     })),
     totals: stats[WEBSITE_LIST_STATS_TOTAL_KEY],
+    totalsComparison: compareStats[WEBSITE_LIST_STATS_TOTAL_KEY],
   });
 }
