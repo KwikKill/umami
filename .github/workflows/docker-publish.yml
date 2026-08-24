@@ -75,16 +75,20 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     continue-on-error: true
+    env:
+      # The `secrets` context can't be used directly in any `if:` (job or
+      # step). Copy it into `env` here - env values may reference secrets -
+      # then check `env.PACKAGE_TOKEN` in the step's `if:` below instead.
+      PACKAGE_TOKEN: ${{ secrets.PACKAGE_TOKEN }}
     steps:
       # A personal (non-org) GHCR package can't be pruned with the automatic
       # GITHUB_TOKEN - a classic PAT with the delete:packages scope is required.
       # Skip cleanly instead of failing the run until PACKAGE_TOKEN is set.
-      # (the secrets context isn't allowed in a job-level `if`, only in steps/env)
       - name: Keep only the 10 most recent versions
-        if: ${{ secrets.PACKAGE_TOKEN != '' }}
+        if: ${{ env.PACKAGE_TOKEN != '' }}
         uses: actions/delete-package-versions@v5
         with:
           package-name: umami
           package-type: container
           min-versions-to-keep: 10
-          token: ${{ secrets.PACKAGE_TOKEN }}
+          token: ${{ env.PACKAGE_TOKEN }}
