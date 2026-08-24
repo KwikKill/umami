@@ -9,6 +9,7 @@ import { OverviewChart } from './OverviewChart';
 import { OverviewControls } from './OverviewControls';
 import { OverviewMetricsBar } from './OverviewMetricsBar';
 import { OverviewTable } from './OverviewTable';
+import { OverviewTopPages } from './OverviewTopPages';
 
 export function DashboardViewPage() {
   const { t, labels, messages } = useMessages();
@@ -43,6 +44,9 @@ export function DashboardViewPage() {
                 isFetching={isFetching}
                 error={error}
               />
+            </Panel>
+            <Panel title={t(labels.pages)}>
+              <OverviewTopPages teamId={teamId} />
             </Panel>
           </>
         )}

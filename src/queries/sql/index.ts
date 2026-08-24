@@ -29,6 +29,7 @@ export * from './getWebsiteDateRange';
 export * from './getWebsiteListCharts';
 export * from './getWebsiteListPageviews';
 export * from './getWebsiteListStats';
+export * from './getWebsiteListTopPages';
 export * from './getWebsiteStats';
 export * from './getWeeklyTraffic';
 export * from './heatmap/extractHeatmapEvents';
