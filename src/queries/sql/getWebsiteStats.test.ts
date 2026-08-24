@@ -65,8 +65,15 @@ describe('getWebsiteStats default bounce path', () => {
 
     const [query] = prismaRawQuery.mock.calls[0];
 
-    expect(query).toContain('t.c = 1 and t.has_custom_event = 0');
+    expect(query).toContain('t.c = 1 and t.has_custom_event = 0 and t.has_heartbeat = 0');
     expect(query).toContain('max(case when website_event.event_type = 2 then 1 else 0 end) as "has_custom_event"');
+    expect(query).toContain('max(case when website_event.event_type = 6 then 1 else 0 end) as "has_heartbeat"');
+    // A heartbeat (event_type 6) must never inflate the pageview count itself.
+    expect(query).toContain('sum(case when website_event.event_type NOT IN (2, 5, 6) then 1 else 0 end) as "c"');
+    // But it must still extend the visit's min/max span so duration reflects real time on page.
+    expect(query).toContain(
+      'max(case when website_event.event_type NOT IN (2, 5) then website_event.created_at end) as "max_time"',
+    );
     expect(query).not.toContain('left join (');
   });
 
@@ -78,7 +85,9 @@ describe('getWebsiteStats default bounce path', () => {
     const [query] = clickhouseRawQuery.mock.calls[0];
 
     expect(query).toContain('from website_event_stats_hourly "website_event"');
-    expect(query).toContain('sumIf(1, t.c = 1 and t.has_custom_event = 0) as "bounces"');
+    expect(query).toContain(
+      'sumIf(1, t.c = 1 and t.has_custom_event = 0 and t.has_heartbeat = 0) as "bounces"',
+    );
     expect(query).toContain('has_custom_event');
     expect(query).not.toContain('left join (');
   });

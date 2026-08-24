@@ -59,23 +59,24 @@ async function relationalQuery(
       cast(coalesce(sum(t.c), 0) as bigint) as "pageviews",
       count(distinct t.session_id) as "visitors",
       count(distinct t.visit_id) as "visits",
-      coalesce(sum(case when t.c = 1 and t.has_custom_event = 0 then 1 else 0 end), 0) as "bounces",
+      coalesce(sum(case when t.c = 1 and t.has_custom_event = 0 and t.has_heartbeat = 0 then 1 else 0 end), 0) as "bounces",
       cast(coalesce(sum(${getTimestampDiffSQL('t.min_time', 't.max_time')}), 0) as bigint) as "totaltime"
     from (
       select
         website_event.website_id as "websiteId",
         website_event.session_id,
         website_event.visit_id,
-        sum(case when website_event.event_type NOT IN (2, 5) then 1 else 0 end) as "c",
+        sum(case when website_event.event_type NOT IN (2, 5, 6) then 1 else 0 end) as "c",
         min(case when website_event.event_type NOT IN (2, 5) then website_event.created_at end) as "min_time",
         max(case when website_event.event_type NOT IN (2, 5) then website_event.created_at end) as "max_time",
-        max(case when website_event.event_type = ${EVENT_TYPE.customEvent} then 1 else 0 end) as "has_custom_event"
+        max(case when website_event.event_type = ${EVENT_TYPE.customEvent} then 1 else 0 end) as "has_custom_event",
+        max(case when website_event.event_type = ${EVENT_TYPE.heartbeat} then 1 else 0 end) as "has_heartbeat"
       from website_event
       where website_event.website_id = any({{websiteIds}}::uuid[])
         and website_event.created_at between {{startDate}} and {{endDate}}
         and website_event.event_type != ${EVENT_TYPE.performance}
       group by 1, 2, 3
-      having sum(case when website_event.event_type NOT IN (2, 5) then 1 else 0 end) > 0
+      having sum(case when website_event.event_type NOT IN (2, 5, 6) then 1 else 0 end) > 0
     ) as t
     group by "websiteId"
     `,
@@ -98,17 +99,18 @@ async function clickhouseQuery(
       sum(t.c) as "pageviews",
       uniq(t.session_id) as "visitors",
       uniq(t.visit_id) as "visits",
-      sumIf(1, t.c = 1 and t.has_custom_event = 0) as "bounces",
+      sumIf(1, t.c = 1 and t.has_custom_event = 0 and t.has_heartbeat = 0) as "bounces",
       sum(t.max_time - t.min_time) as "totaltime"
     from (
       select
         website_id,
         session_id,
         visit_id,
-        sum(views) c,
+        sumIf(views, event_type != ${EVENT_TYPE.heartbeat}) c,
         minIf(min_time, event_type NOT IN (2, 5)) min_time,
         maxIf(max_time, event_type NOT IN (2, 5)) max_time,
-        max(if(event_type = ${EVENT_TYPE.customEvent} and length(event_name) > 0, 1, 0)) has_custom_event
+        max(if(event_type = ${EVENT_TYPE.customEvent} and length(event_name) > 0, 1, 0)) has_custom_event,
+        max(if(event_type = ${EVENT_TYPE.heartbeat}, 1, 0)) has_heartbeat
       from website_event_stats_hourly
       where website_id in {websiteIds:Array(UUID)}
         and created_at between {startDate:DateTime64} and {endDate:DateTime64}

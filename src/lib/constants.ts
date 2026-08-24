@@ -104,6 +104,7 @@ export const COLLECTION_TYPE = {
   event: 'event',
   identify: 'identify',
   performance: 'performance',
+  heartbeat: 'heartbeat',
   record: 'record',
 } as const;
 
@@ -121,6 +122,9 @@ export const EVENT_TYPE = {
   linkEvent: 3,
   pixelEvent: 4,
   performance: 5,
+  // Periodic ping sent by the tracker while a page stays open/visible, so a
+  // long single-page (SPA) visit isn't miscounted as a bounce with ~0 duration.
+  heartbeat: 6,
 } as const;
 
 export const HEATMAP_EVENT_TYPE = {

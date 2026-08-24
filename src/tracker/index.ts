@@ -250,6 +250,7 @@ type MetricEntry = PerformanceEntry & {
   const credentials = (config('fetch-credentials') || 'omit') as RequestCredentials;
   const perf = config('performance') === _true;
   const autoPageview = config('auto-pageview') !== _false;
+  const heartbeat = config('heartbeat') !== _false;
 
   const domains = domain.split(',').map(n => n.trim());
   const host =
@@ -259,6 +260,7 @@ type MetricEntry = PerformanceEntry & {
   const eventRegex = /data-umami-event-([\w-_]+)/;
   const eventNameAttribute = `${_data}umami-event`;
   const delayDuration = 300;
+  const heartbeatInterval = 15000;
 
   /* Helper functions */
 
@@ -425,6 +427,7 @@ type MetricEntry = PerformanceEntry & {
       handlePathChanges();
       handleClicks();
       if (perf) initPerformance();
+      if (heartbeat) startHeartbeat();
     }
   };
 
@@ -625,6 +628,19 @@ type MetricEntry = PerformanceEntry & {
     window.addEventListener('pagehide', sendPerformance);
   };
 
+  /* Heartbeat */
+
+  // Keeps a long-lived single-page visit from being miscounted as a bounce
+  // with ~0 duration: a page with no further pageview still pings while it's
+  // actually open, which extends the visit and marks it as engaged.
+  const startHeartbeat = () => {
+    heartbeatTimer = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        send(getPayload(), 'heartbeat');
+      }
+    }, heartbeatInterval);
+  };
+
   /* Start */
 
   if (!window.umami) {
@@ -643,6 +659,7 @@ type MetricEntry = PerformanceEntry & {
   let cache: string | undefined;
   let identity: string | undefined;
   let flushPerformance: (() => void) | undefined;
+  let heartbeatTimer: ReturnType<typeof setInterval> | undefined;
 
   if (autoTrack && !trackingDisabled()) {
     if (document.readyState === 'complete') {

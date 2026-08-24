@@ -49,15 +49,19 @@ async function relationalQuery(
   );
   const needsBounceEvents = filters.excludeBounce !== true;
   const bounceQuery = needsBounceEvents
-    ? `sum(case when t.c = 1 and coalesce(e.has_custom_event, 0) = 0 then 1 else 0 end) as "bounces",`
+    ? `sum(case when t.c = 1 and coalesce(e.has_custom_event, 0) = 0 and coalesce(e.has_heartbeat, 0) = 0 then 1 else 0 end) as "bounces",`
     : '0 as "bounces",';
   const visitEventsJoin = needsBounceEvents
     ? `left join (
-      select session_id, visit_id, 1 as "has_custom_event"
+      select
+        session_id,
+        visit_id,
+        max(case when event_type = ${EVENT_TYPE.customEvent} then 1 else 0 end) as "has_custom_event",
+        max(case when event_type = ${EVENT_TYPE.heartbeat} then 1 else 0 end) as "has_heartbeat"
       from website_event
       where website_id = {{websiteId::uuid}}
         and created_at between {{startDate}} and {{endDate}}
-        and event_type = ${EVENT_TYPE.customEvent}
+        and event_type in (${EVENT_TYPE.customEvent}, ${EVENT_TYPE.heartbeat})
       group by 1, 2
     ) as e
       on e.session_id = t.session_id
@@ -116,15 +120,19 @@ async function clickhouseQuery(
   });
   const needsBounceEvents = filters.excludeBounce !== true;
   const bounceQuery = needsBounceEvents
-    ? `sumIf(1, t.c = 1 and ifNull(e.has_custom_event, 0) = 0) as "bounces",`
+    ? `sumIf(1, t.c = 1 and ifNull(e.has_custom_event, 0) = 0 and ifNull(e.has_heartbeat, 0) = 0) as "bounces",`
     : '0 as "bounces",';
   const visitEventsJoin = needsBounceEvents
     ? `left join (
-      select session_id, visit_id, toUInt8(1) as has_custom_event
+      select
+        session_id,
+        visit_id,
+        max(if(event_type = ${EVENT_TYPE.customEvent}, 1, 0)) as has_custom_event,
+        max(if(event_type = ${EVENT_TYPE.heartbeat}, 1, 0)) as has_heartbeat
       from website_event
       where website_id = {websiteId:UUID}
         and created_at between {startDate:DateTime64} and {endDate:DateTime64}
-        and event_type = ${EVENT_TYPE.customEvent}
+        and event_type in (${EVENT_TYPE.customEvent}, ${EVENT_TYPE.heartbeat})
       group by session_id, visit_id
     ) as e using (session_id, visit_id)`
     : '';

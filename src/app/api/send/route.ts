@@ -30,7 +30,7 @@ const safeStringParam = () =>
   });
 
 const schema = z.object({
-  type: z.enum(['event', 'identify', 'performance']),
+  type: z.enum(['event', 'identify', 'performance', 'heartbeat']),
   payload: z
     .object({
       website: z.uuid().optional(),
@@ -339,6 +339,33 @@ export async function POST(request: Request) {
           sessionId,
           sessionData: data,
           distinctId: id,
+          createdAt,
+        });
+      }
+    } else if (type === COLLECTION_TYPE.heartbeat) {
+      // Website-only: a heartbeat just extends the current visit, there's no
+      // equivalent concept for one-shot link/pixel redirects.
+      if (websiteId) {
+        const base = hostname ? `https://${hostname}` : 'https://localhost';
+        const currentUrl = new URL(url, base);
+        const urlPath = currentUrl.pathname === '/undefined' ? '' : currentUrl.pathname;
+        const urlDomain = currentUrl.hostname.replace(/^www\./, '');
+
+        await saveEvent({
+          websiteId: sourceId,
+          sessionId,
+          visitId,
+          urlPath: safeDecodeURI(urlPath),
+          hostname: hostname || urlDomain,
+          eventType: EVENT_TYPE.heartbeat,
+          browser,
+          os,
+          device,
+          screen,
+          language,
+          country,
+          region,
+          city,
           createdAt,
         });
       }

@@ -183,10 +183,13 @@ function getExcludeBounceQuery(filters: Record<string, any>) {
       and created_at between {startDate:DateTime64} and {endDate:DateTime64}
       and event_type != 5
     group by session_id, visit_id
-    having sum(views) > 1
+    having sumIf(views, event_type != 6) > 1
       or (
-        sum(views) = 1
-        and sumIf(length(event_name), event_type = 2) > 0
+        sumIf(views, event_type != 6) = 1
+        and (
+          sumIf(length(event_name), event_type = 2) > 0
+          or sumIf(1, event_type = 6) > 0
+        )
       )
     ) excludeBounce
     on excludeBounce.exclude_session_id = website_event.session_id
