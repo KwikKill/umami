@@ -9,12 +9,16 @@ export interface WebsiteTopPage {
   pageviews: number;
   visitors: number;
   previousPageviews: number;
+  previousVisitors: number;
 }
 
 export function useWebsiteTopPagesQuery({
   teamId,
   limit = 20,
-}: { teamId?: string; limit?: number } = {}) {
+}: {
+  teamId?: string;
+  limit?: number;
+} = {}) {
   const { get, useQuery } = useApi();
   const { startAt, endAt, timezone } = useDateParameters();
 
