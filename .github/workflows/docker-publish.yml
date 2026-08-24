@@ -69,3 +69,21 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           cache-from: type=gha
           cache-to: type=gha,mode=max,ignore-error=true
+
+  cleanup:
+    name: Delete old GHCR image versions
+    needs: build
+    runs-on: ubuntu-latest
+    # A personal (non-org) GHCR package can't be pruned with the automatic
+    # GITHUB_TOKEN - a classic PAT with the delete:packages scope is required.
+    # Skip cleanly instead of failing the run until PACKAGE_TOKEN is set.
+    if: ${{ secrets.PACKAGE_TOKEN != '' }}
+    continue-on-error: true
+    steps:
+      - name: Keep only the 10 most recent versions
+        uses: actions/delete-package-versions@v5
+        with:
+          package-name: umami
+          package-type: container
+          min-versions-to-keep: 10
+          token: ${{ secrets.PACKAGE_TOKEN }}
