@@ -1,49 +1,48 @@
 'use client';
 import { Column } from '@umami/react-zen';
-import { useEffect } from 'react';
-import { BoardControls } from '@/app/(main)/boards/[boardId]/BoardControls';
-import { BoardViewBody } from '@/app/(main)/boards/[boardId]/BoardViewBody';
 import { Empty } from '@/components/common/Empty';
 import { PageBody } from '@/components/common/PageBody';
-import { useBoard, useMessages, useNavigation } from '@/components/hooks';
-import { DashboardProvider } from './DashboardProvider';
-import { DashboardViewHeader } from './DashboardViewHeader';
-
-function DashboardContent() {
-  const { board } = useBoard();
-  const { t, messages } = useMessages();
-  const rows = board?.parameters?.rows ?? [];
-  const hasComponents = rows.some(row => row.columns?.some(column => !!column.component));
-
-  if (!hasComponents) {
-    return <Empty message={t(messages.emptyDashboard)} />;
-  }
-
-  return <BoardViewBody />;
-}
+import { PageHeader } from '@/components/common/PageHeader';
+import { Panel } from '@/components/common/Panel';
+import { useMessages, useNavigation, useWebsiteOverviewQuery } from '@/components/hooks';
+import { OverviewControls } from './OverviewControls';
+import { OverviewMetricsBar } from './OverviewMetricsBar';
+import { OverviewTable } from './OverviewTable';
 
 export function DashboardViewPage() {
-  const { teamId, router } = useNavigation();
+  const { t, labels, messages } = useMessages();
+  const { teamId } = useNavigation();
+  const { data, isLoading, isFetching, error } = useWebsiteOverviewQuery({ teamId });
 
-  useEffect(() => {
-    if (teamId) {
-      router.replace('/dashboard');
-    }
-  }, [teamId, router]);
-
-  if (teamId) {
-    return null;
-  }
+  const isEmpty = !isLoading && !isFetching && !error && data?.websites?.length === 0;
 
   return (
-    <DashboardProvider>
-      <PageBody>
-        <Column>
-          <DashboardViewHeader />
-          <BoardControls />
-          <DashboardContent />
-        </Column>
-      </PageBody>
-    </DashboardProvider>
+    <PageBody>
+      <Column gap="6" margin="2">
+        <PageHeader title={t(labels.dashboard)}>
+          <OverviewControls />
+        </PageHeader>
+        {isEmpty ? (
+          <Empty message={t(messages.emptyOverview)} />
+        ) : (
+          <>
+            <OverviewMetricsBar
+              data={data}
+              isLoading={isLoading}
+              isFetching={isFetching}
+              error={error}
+            />
+            <Panel>
+              <OverviewTable
+                data={data?.websites}
+                isLoading={isLoading}
+                isFetching={isFetching}
+                error={error}
+              />
+            </Panel>
+          </>
+        )}
+      </Column>
+    </PageBody>
   );
 }

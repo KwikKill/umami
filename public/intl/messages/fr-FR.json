@@ -460,6 +460,7 @@
     "delete-website-warning": "Toutes les données associées seront supprimées.",
     "error": "Un problème est survenu.",
     "empty-dashboard": "Votre tableau de bord est vide. Cliquez sur Conception pour ajouter votre premier composant.",
+    "empty-overview": "Aucun site à afficher pour le moment. Ajoutez un site pour voir ses statistiques combinées ici.",
     "event-log": "<b>{event}</b> sur <a>{url}</a>",
     "forbidden": "Interdit",
     "go-to-settings": "Aller aux paramètres",

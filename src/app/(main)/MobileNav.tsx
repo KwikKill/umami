@@ -12,22 +12,18 @@ import { SettingsNav } from './settings/SettingsNav';
 
 export function MobileNav() {
   const { t, labels } = useMessages();
-  const { pathname, websiteId, teamId, renderUrl } = useNavigation();
+  const { pathname, websiteId, renderUrl } = useNavigation();
   const isAdmin = pathname.includes('/admin');
   const isSettings = pathname.includes('/settings');
   const isMain = !websiteId && !isAdmin && !isSettings;
 
   const links = [
-    ...(!teamId
-      ? [
-          {
-            id: 'dashboard',
-            label: t(labels.dashboard),
-            path: '/dashboard',
-            icon: <PanelsLeftBottom />,
-          },
-        ]
-      : []),
+    {
+      id: 'dashboard',
+      label: t(labels.dashboard),
+      path: '/dashboard',
+      icon: <PanelsLeftBottom />,
+    },
     {
       id: 'boards',
       label: t(labels.boards),

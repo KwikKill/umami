@@ -479,6 +479,7 @@ export const messages: Record<string, string> = {
   noWebsitesConfigured: 'message.no-websites-configured',
   noTeamWebsites: 'message.no-team-websites',
   emptyDashboard: 'message.empty-dashboard',
+  emptyOverview: 'message.empty-overview',
   selectComponentPreview: 'message.select-component-preview',
   selectWebsiteFirst: 'message.select-website-first',
   selectBoardEntityFirst: 'message.select-board-entity-first',

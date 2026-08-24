@@ -36,15 +36,18 @@ test('shows the dashboard link outside a team', () => {
   expect(screen.getByRole('link', { name: /dashboard/i })).toHaveAttribute('href', '/dashboard');
 });
 
-test('hides the dashboard link inside a team', () => {
+test('links to the team dashboard inside a team', () => {
   mockUseNavigation.mockReturnValue({
     pathname: '/teams/team-1',
     websiteId: undefined,
     teamId: 'team-1',
-    renderUrl: (path: string) => path,
+    renderUrl: (path: string) => `/teams/team-1${path}`,
   });
 
   render(<MobileNav />);
 
-  expect(screen.queryByRole('link', { name: /dashboard/i })).not.toBeInTheDocument();
+  expect(screen.getByRole('link', { name: /dashboard/i })).toHaveAttribute(
+    'href',
+    '/teams/team-1/dashboard',
+  );
 });
