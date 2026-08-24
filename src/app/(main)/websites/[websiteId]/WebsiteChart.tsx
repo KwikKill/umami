@@ -1,8 +1,10 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { LoadingPanel } from '@/components/common/LoadingPanel';
-import { useDateRange, useTimezone } from '@/components/hooks';
+import { useDateRange, useTimezone, useWebsiteAnnotationsQuery } from '@/components/hooks';
 import { useWebsitePageviewsQuery } from '@/components/hooks/queries/useWebsitePageviewsQuery';
+import { DialogButton } from '@/components/input/DialogButton';
 import { PageviewsChart } from '@/components/metrics/PageviewsChart';
+import { AnnotationEditForm } from './AnnotationEditForm';
 
 export function WebsiteChart({
   websiteId,
@@ -18,6 +20,8 @@ export function WebsiteChart({
     websiteId,
     compare: compareMode ? dateCompare?.compare : undefined,
   });
+  const { data: annotations } = useWebsiteAnnotationsQuery(websiteId);
+  const [editingAnnotationId, setEditingAnnotationId] = useState<string | null>(null);
   const { pageviews, sessions, compare } = (data || {}) as any;
 
   const chartData = useMemo(() => {
@@ -45,6 +49,8 @@ export function WebsiteChart({
     };
   }, [data, startDate, endDate, unit]);
 
+  const editingAnnotation = annotations?.find(({ id }) => id === editingAnnotationId);
+
   return (
     <LoadingPanel data={data} isFetching={isFetching} isLoading={isLoading} error={error}>
       <PageviewsChart
@@ -53,7 +59,24 @@ export function WebsiteChart({
         minDate={startDate}
         maxDate={endDate}
         unit={unit}
+        annotations={annotations}
+        onAnnotationClick={setEditingAnnotationId}
       />
+      <DialogButton
+        isOpen={!!editingAnnotationId}
+        onOpenChange={isOpen => !isOpen && setEditingAnnotationId(null)}
+        width="500px"
+      >
+        {({ close }) =>
+          editingAnnotation ? (
+            <AnnotationEditForm
+              websiteId={websiteId}
+              annotation={editingAnnotation}
+              onClose={close}
+            />
+          ) : null
+        }
+      </DialogButton>
     </LoadingPanel>
   );
 }

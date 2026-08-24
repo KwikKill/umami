@@ -105,6 +105,7 @@ model Website {
   sessionReplays      SessionReplay[]
   sessionReplaysSaved SessionReplaySaved[]
   heatmapEvents       HeatmapEvent[]
+  annotations         Annotation[]
 
   @@index([userId])
   @@index([teamId])
@@ -282,6 +283,22 @@ model Segment {
 
   @@index([websiteId])
   @@map("segment")
+}
+
+model Annotation {
+  id        String    @id() @map("annotation_id") @db.Uuid
+  websiteId String    @map("website_id") @db.Uuid
+  date      DateTime  @map("date") @db.Timestamptz(6)
+  text      String    @db.VarChar(500)
+  createdBy String?   @map("created_by") @db.Uuid
+  createdAt DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime? @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  website Website @relation(fields: [websiteId], references: [id])
+
+  @@index([websiteId])
+  @@index([websiteId, date])
+  @@map("website_annotation")
 }
 
 model Revenue {

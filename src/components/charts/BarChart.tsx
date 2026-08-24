@@ -22,6 +22,13 @@ const dateFormats = {
   year: 'yyyy',
 };
 
+export interface ChartAnnotation {
+  id: string;
+  value: string;
+  title: string;
+  text: string;
+}
+
 export interface BarChartProps extends ChartProps {
   unit?: string;
   stacked?: boolean;
@@ -32,6 +39,8 @@ export interface BarChartProps extends ChartProps {
   YAxisType?: string;
   minDate?: Date;
   maxDate?: Date;
+  annotations?: ChartAnnotation[];
+  onAnnotationClick?: (id: string) => void;
 }
 
 interface TooltipState {
@@ -39,6 +48,8 @@ interface TooltipState {
   color?: string;
   value: string;
 }
+
+const ANNOTATION_COLOR = '#e68619';
 
 function BarChartComponent({
   chartData,
@@ -51,9 +62,12 @@ function BarChartComponent({
   minDate,
   maxDate,
   currency,
+  annotations,
+  onAnnotationClick,
   ...props
 }: BarChartProps) {
   const [tooltip, setTooltip] = useState<TooltipState | null>(null);
+  const [annotationTooltip, setAnnotationTooltip] = useState<TooltipState | null>(null);
   const { theme } = useTheme();
   const { locale } = useLocale();
   const { colors } = useMemo(() => getThemeColors(theme), [theme]);
@@ -101,6 +115,36 @@ function BarChartComponent({
           },
         },
       },
+      plugins: {
+        annotation: {
+          annotations: Object.fromEntries(
+            (annotations || []).map(({ id, value, title, text }) => [
+              id,
+              {
+                type: 'line',
+                scaleID: 'x',
+                value,
+                borderColor: ANNOTATION_COLOR,
+                borderWidth: 2,
+                borderDash: [4, 4],
+                label: {
+                  display: true,
+                  content: '🚩',
+                  position: 'start',
+                  rotation: 0,
+                  yAdjust: -4,
+                  backgroundColor: 'transparent',
+                  font: { size: 12 },
+                  padding: 0,
+                },
+                enter: () => setAnnotationTooltip({ title, color: ANNOTATION_COLOR, value: text }),
+                leave: () => setAnnotationTooltip(null),
+                click: () => onAnnotationClick?.(id),
+              },
+            ]),
+          ),
+        },
+      },
     };
   }, [
     colors,
@@ -113,6 +157,8 @@ function BarChartComponent({
     locale,
     XAxisType,
     YAxisType,
+    annotations,
+    onAnnotationClick,
   ]);
 
   const handleTooltip = useCallback(
@@ -157,6 +203,7 @@ function BarChartComponent({
         onTooltip={handleTooltip}
       />
       {tooltip && <ChartTooltip {...tooltip} />}
+      {annotationTooltip && <ChartTooltip {...annotationTooltip} />}
     </>
   );
 }

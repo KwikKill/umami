@@ -4,9 +4,15 @@ import { BarChart, type BarChartProps } from '@/components/charts/BarChart';
 import { useLocale, useMessages } from '@/components/hooks';
 import { renderDateLabels } from '@/lib/charts';
 import { getThemeColors } from '@/lib/colors';
-import { generateTimeSeries } from '@/lib/date';
+import { DATE_FORMATS, formatDate, generateTimeSeries } from '@/lib/date';
 
-export interface PageviewsChartProps extends BarChartProps {
+export interface PageviewsChartAnnotation {
+  id: string;
+  date: string | Date;
+  text: string;
+}
+
+export interface PageviewsChartProps extends Omit<BarChartProps, 'annotations'> {
   data: {
     pageviews: any[];
     sessions: any[];
@@ -16,13 +22,30 @@ export interface PageviewsChartProps extends BarChartProps {
     };
   };
   unit: string;
+  annotations?: PageviewsChartAnnotation[];
 }
 
-export function PageviewsChart({ data, unit, minDate, maxDate, ...props }: PageviewsChartProps) {
+export function PageviewsChart({
+  data,
+  unit,
+  minDate,
+  maxDate,
+  annotations,
+  ...props
+}: PageviewsChartProps) {
   const { t, labels } = useMessages();
   const { theme } = useTheme();
   const { locale, dateLocale } = useLocale();
   const { colors } = useMemo(() => getThemeColors(theme), [theme]);
+
+  const chartAnnotations = useMemo(() => {
+    return (annotations || []).map(({ id, date, text }) => ({
+      id,
+      value: formatDate(date, DATE_FORMATS[unit], dateLocale),
+      title: formatDate(date, 'PPPP', dateLocale),
+      text,
+    }));
+  }, [annotations, unit, dateLocale]);
 
   const chartData: any = useMemo(() => {
     if (!data) return;
@@ -92,6 +115,7 @@ export function PageviewsChart({ data, unit, minDate, maxDate, ...props }: Pagev
       minDate={minDate}
       maxDate={maxDate}
       renderXLabel={renderXLabel}
+      annotations={chartAnnotations}
       height="400px"
     />
   );

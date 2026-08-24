@@ -76,6 +76,7 @@ export * from './queries/useWebsiteListChartsQuery';
 export * from './queries/useWebsiteOverviewPageviewsQuery';
 export * from './queries/useWebsiteOverviewQuery';
 export * from './queries/useWebsiteQuery';
+export * from './queries/useWebsiteAnnotationsQuery';
 export * from './queries/useWebsiteSegmentQuery';
 export * from './queries/useWebsiteSegmentsQuery';
 export * from './queries/useWebsiteSessionQuery';

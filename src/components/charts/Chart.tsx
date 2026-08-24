@@ -5,11 +5,13 @@ import ChartJS, {
   type LegendItem,
   type UpdateMode,
 } from 'chart.js/auto';
+import AnnotationPlugin from 'chartjs-plugin-annotation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Legend } from '@/components/metrics/Legend';
 import { DEFAULT_ANIMATION_DURATION } from '@/lib/constants';
 
 ChartJS.defaults.font.family = 'Inter';
+ChartJS.register(AnnotationPlugin);
 
 export interface ChartProps extends BoxProps {
   type?: 'bar' | 'bubble' | 'doughnut' | 'pie' | 'line' | 'polarArea' | 'radar' | 'scatter';
@@ -50,6 +52,7 @@ export function Chart({
           duration: 0,
         },
       },
+      ...chartOptions,
       plugins: {
         legend: {
           display: false,
@@ -59,8 +62,8 @@ export function Chart({
           intersect: true,
           external: onTooltip,
         },
+        ...chartOptions?.plugins,
       },
-      ...chartOptions,
     };
   }, [chartOptions]);
 
