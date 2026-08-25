@@ -13,11 +13,17 @@ export type DynamicDataType = ObjectValues<typeof DATA_TYPE>;
 export type Operator = (typeof OPERATORS)[keyof typeof OPERATORS];
 
 export interface Auth {
+  token?: string;
+  authKey?: string;
   user?: {
     id: string;
     username: string;
     role: string;
     isAdmin: boolean;
+  };
+  apiKey?: {
+    id: string;
+    permissions: string[];
   };
   shareToken?: {
     shareType?: number;

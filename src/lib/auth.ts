@@ -1,4 +1,5 @@
 import debug from 'debug';
+import { hashApiKey, isApiKeyToken } from '@/lib/apiKey';
 import {
   ROLE_PERMISSIONS,
   ROLES,
@@ -9,7 +10,9 @@ import {
 import { createAuthKey, hash, secret } from '@/lib/crypto';
 import { createSecureToken, parseSecureToken, parseToken } from '@/lib/jwt';
 import redis from '@/lib/redis';
+import type { Auth } from '@/lib/types';
 import { ensureArray } from '@/lib/utils';
+import { getApiKeyByHash, updateApiKeyLastUsed } from '@/queries/prisma/apiKey';
 import { getUser } from '@/queries/prisma/user';
 
 const log = debug('umami:auth');
@@ -20,8 +23,44 @@ export function getBearerToken(request: Request) {
   return auth?.split(' ')[1];
 }
 
-export async function checkAuth(request: Request) {
+async function checkApiKeyAuth(token: string): Promise<Auth | null> {
+  const apiKey = await getApiKeyByHash(hashApiKey(token));
+
+  if (!apiKey) {
+    log('Invalid API key');
+    return null;
+  }
+
+  // Prisma's inferred select type for `findUser` is deep enough that TS
+  // resolves it differently here than in the sibling JWT flow below - cast
+  // to keep this in line with that flow instead of fighting the inference.
+  const user = (await getUser(apiKey.userId, { includePassword: true })) as any;
+
+  if (!user) {
+    log('API key user not found');
+    return null;
+  }
+
+  delete user.password;
+  user.isAdmin = user.role === ROLES.admin;
+
+  // Fire and forget - a slow/failed write here shouldn't block the request.
+  updateApiKeyLastUsed(apiKey.id).catch(() => {});
+
+  return {
+    token,
+    user,
+    apiKey: { id: apiKey.id, permissions: apiKey.permissions as string[] },
+  };
+}
+
+export async function checkAuth(request: Request): Promise<Auth | null> {
   const token = getBearerToken(request);
+
+  if (isApiKeyToken(token)) {
+    return checkApiKeyAuth(token);
+  }
+
   const payload = parseSecureToken(token, secret());
   const shareToken = await parseShareToken(request);
 

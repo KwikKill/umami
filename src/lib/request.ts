@@ -1,5 +1,6 @@
 import { startOfMonth, subMonths } from 'date-fns';
 import { z } from 'zod';
+import { hasApiKeyPermission, requiresWriteScope } from '@/lib/apiKey';
 import { checkAuth } from '@/lib/auth';
 import { DEFAULT_PAGE_SIZE, FILTER_COLUMNS, OPERATORS } from '@/lib/constants';
 import { getAllowedUnits, getMinimumUnit, maxDate, parseDateRange } from '@/lib/date';
@@ -9,7 +10,7 @@ import {
   parseSessionPropertyFilters,
   parseUniversalEventPropertyFilters,
 } from '@/lib/params';
-import { badRequest, unauthorized } from '@/lib/response';
+import { badRequest, forbidden, unauthorized } from '@/lib/response';
 import type { QueryFilters } from '@/lib/types';
 import { getWebsiteSegment } from '@/queries/prisma';
 
@@ -53,6 +54,12 @@ export async function parseRequest(
 
     if (!auth) {
       error = () => unauthorized();
+    } else if (
+      auth.apiKey &&
+      requiresWriteScope(request.method) &&
+      !hasApiKeyPermission(auth.apiKey.permissions, 'write')
+    ) {
+      error = () => forbidden({ message: 'API key does not have write permission' });
     }
   }
 

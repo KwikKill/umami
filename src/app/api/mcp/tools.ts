@@ -1,6 +1,7 @@
 import { McpServer } from '@modelcontextprotocol/server';
 import { subDays } from 'date-fns';
 import { z } from 'zod';
+import { type ApiKeyPermission, hasApiKeyPermission } from '@/lib/apiKey';
 import { DOMAIN_REGEX } from '@/lib/constants';
 import { uuid } from '@/lib/crypto';
 import { getCompareDate } from '@/lib/date';
@@ -20,6 +21,17 @@ function jsonResult(data: unknown) {
 
 function errorResult(message: string) {
   return { content: [{ type: 'text' as const, text: message }], isError: true };
+}
+
+// When called via an API key, MCP tools go through a single HTTP endpoint
+// (all POST), so the read/write scope can't be inferred from the HTTP
+// method the way it is for the REST API - each tool checks it explicitly.
+function checkScope(auth: Auth, permission: ApiKeyPermission) {
+  if (auth.apiKey && !hasApiKeyPermission(auth.apiKey.permissions, permission)) {
+    return errorResult(`This API key does not have "${permission}" permission.`);
+  }
+
+  return null;
 }
 
 function getDateRange(days: number) {
@@ -60,6 +72,9 @@ export function buildMcpServer(auth: Auth, baseUrl: string) {
       }),
     },
     async ({ teamId }) => {
+      const scopeError = checkScope(auth, 'read');
+      if (scopeError) return scopeError;
+
       if (teamId && !(await canViewTeam(auth, teamId))) {
         return errorResult(`Not authorized to view team ${teamId}.`);
       }
@@ -96,6 +111,9 @@ export function buildMcpServer(auth: Auth, baseUrl: string) {
       }),
     },
     async ({ name, domain, teamId }) => {
+      const scopeError = checkScope(auth, 'write');
+      if (scopeError) return scopeError;
+
       if (teamId && !(await canCreateTeamWebsite(auth, teamId))) {
         return errorResult(`Not authorized to create websites for team ${teamId}.`);
       }
@@ -136,6 +154,9 @@ export function buildMcpServer(auth: Auth, baseUrl: string) {
       }),
     },
     async ({ websiteId }) => {
+      const scopeError = checkScope(auth, 'read');
+      if (scopeError) return scopeError;
+
       if (!(await canViewWebsiteSection(auth, websiteId, ['overview']))) {
         return errorResult(`Not authorized to view website ${websiteId}.`);
       }
@@ -155,6 +176,9 @@ export function buildMcpServer(auth: Auth, baseUrl: string) {
       }),
     },
     async ({ websiteId, days }) => {
+      const scopeError = checkScope(auth, 'read');
+      if (scopeError) return scopeError;
+
       if (!(await canViewWebsiteSection(auth, websiteId, ['overview', 'compare']))) {
         return errorResult(`Not authorized to view website ${websiteId}.`);
       }
@@ -186,6 +210,9 @@ export function buildMcpServer(auth: Auth, baseUrl: string) {
       }),
     },
     async ({ teamId, days }) => {
+      const scopeError = checkScope(auth, 'read');
+      if (scopeError) return scopeError;
+
       const websiteIds = await resolveWebsiteIds(auth, teamId);
 
       if (websiteIds === null) {
@@ -225,6 +252,9 @@ export function buildMcpServer(auth: Auth, baseUrl: string) {
       }),
     },
     async ({ teamId, days, limit }) => {
+      const scopeError = checkScope(auth, 'read');
+      if (scopeError) return scopeError;
+
       const websiteIds = await resolveWebsiteIds(auth, teamId);
 
       if (websiteIds === null) {

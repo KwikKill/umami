@@ -9,6 +9,7 @@ import { Panel } from '@/components/common/Panel';
 import { useMessages, useTwoFactorStatusQuery } from '@/components/hooks';
 import { TwoFactorDisableModal } from '@/components/modals/TwoFactorDisableModal';
 import { TwoFactorSetupModal } from '@/components/modals/TwoFactorSetupModal';
+import { ApiKeysPanel } from './ApiKeysPanel';
 
 export function UserSecurityPage() {
   const { t, labels, messages } = useMessages();
@@ -108,6 +109,7 @@ export function UserSecurityPage() {
             )}
           </Column>
         </Panel>
+        <ApiKeysPanel />
       </Column>
 
       {showSetup && <TwoFactorSetupModal required={false} onClose={handleSetupClose} />}

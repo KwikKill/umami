@@ -1,3 +1,4 @@
+import { keepPreviousData } from '@tanstack/react-query';
 import type { ReactQueryOptions } from '@/lib/types';
 import { useApi } from '../useApi';
 import { useDateParameters } from '../useDateParameters';
@@ -22,6 +23,7 @@ export function useWebsiteAnnotationsQuery(
     queryKey: ['website:annotations', { websiteId, startAt, endAt, modified }],
     queryFn: () => get(`/websites/${websiteId}/annotations`, { startAt, endAt }),
     enabled: !!websiteId,
+    placeholderData: keepPreviousData,
     ...options,
   });
 }
