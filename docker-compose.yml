@@ -1,7 +1,7 @@
 ---
 services:
   umami:
-    image: ghcr.io/umami-software/umami:latest
+    image: ghcr.io/kwikkill/umami:latest
     ports:
       - "3000:3000"
     environment:
