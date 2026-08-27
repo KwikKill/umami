@@ -18,6 +18,17 @@ export const dateRangeParams = {
   endAt: z.coerce.number().optional(),
   startDate: z.coerce.date().optional(),
   endDate: z.coerce.date().optional(),
+  // Relative alternative to startAt+endAt/startDate+endDate: "the last
+  // sinceMs milliseconds up to now" - same unit/granularity as startAt so
+  // it doesn't lose precision to startDate/endDate, computed server-side
+  // (see getRequestDateRange) so callers don't have to compute an
+  // absolute range themselves. Capped at 1 year.
+  sinceMs: z.coerce
+    .number()
+    .int()
+    .positive()
+    .max(365 * 24 * 60 * 60 * 1000)
+    .optional(),
   timezone: timezoneParam.optional(),
   unit: unitParam.optional(),
   compare: z.enum(['prev', 'yoy']).optional(),
@@ -32,11 +43,12 @@ export function withDateRange<T extends z.ZodRawShape>(shape?: T) {
     .superRefine((data: Record<string, unknown>, ctx) => {
       const hasTimestamps = data.startAt != null && data.endAt != null;
       const hasDates = data.startDate != null && data.endDate != null;
+      const hasSinceMs = data.sinceMs != null;
 
-      if (!hasTimestamps && !hasDates) {
+      if (!hasTimestamps && !hasDates && !hasSinceMs) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: 'Either startAt+endAt or startDate+endDate must be provided',
+          message: 'Either startAt+endAt, startDate+endDate, or sinceMs must be provided',
         });
       }
     });

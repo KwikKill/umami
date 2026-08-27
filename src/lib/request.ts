@@ -75,10 +75,22 @@ export async function getJsonBody(request: Request) {
 }
 
 export function getRequestDateRange(query: Record<string, string>) {
-  const { startAt, endAt, unit, timezone } = query;
+  const { startAt, endAt, sinceMs, unit, timezone } = query;
 
-  const startDate = new Date(+startAt);
-  const endDate = new Date(+endAt);
+  let startDate: Date;
+  let endDate: Date;
+
+  // `sinceMs` (validated by withDateRange in schema.ts) means "the last
+  // sinceMs milliseconds up to now" - takes precedence when present so
+  // callers don't have to compute startAt/endAt themselves. Same unit as
+  // startAt/endAt, unlike a day count, so it doesn't lose precision.
+  if (sinceMs) {
+    endDate = new Date();
+    startDate = new Date(endDate.getTime() - +sinceMs);
+  } else {
+    startDate = new Date(+startAt);
+    endDate = new Date(+endAt);
+  }
 
   return {
     startDate,

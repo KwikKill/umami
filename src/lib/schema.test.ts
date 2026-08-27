@@ -60,6 +60,17 @@ describe('withDateRange', () => {
     expect(() => schema.parse({ startAt: 5 })).toThrow();
   });
 
+  test('accepts a relative sinceMs range and coerces it to a number', () => {
+    const result = schema.parse({ sinceMs: '604800000' });
+    expect(result.sinceMs).toBe(604800000);
+  });
+
+  test('rejects a non-positive or out-of-range sinceMs value', () => {
+    expect(() => schema.parse({ sinceMs: '0' })).toThrow();
+    expect(() => schema.parse({ sinceMs: '-604800000' })).toThrow();
+    expect(() => schema.parse({ sinceMs: String(366 * 24 * 60 * 60 * 1000) })).toThrow();
+  });
+
   test('merges an additional shape into the schema', () => {
     const extended = withDateRange({ websiteId: z.uuid() });
     const result = extended.parse({ startAt: 1, endAt: 2, websiteId: UUID });
