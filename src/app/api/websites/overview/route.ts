@@ -1,18 +1,22 @@
-import { fromZonedTime } from 'date-fns-tz';
 import { z } from 'zod';
-import { getCompareDate, parseDateRange } from '@/lib/date';
-import { parseRequest } from '@/lib/request';
+import { getCompareDate } from '@/lib/date';
+import { getRequestDateRange, parseRequest } from '@/lib/request';
 import { json, unauthorized } from '@/lib/response';
-import { timezoneParam } from '@/lib/schema';
+import { withDateRange } from '@/lib/schema';
 import { canViewTeam } from '@/permissions';
 import { getTeamWebsites, getUserWebsites } from '@/queries/prisma';
 import { getWebsiteListStats, WEBSITE_LIST_STATS_TOTAL_KEY } from '@/queries/sql';
 
-const schema = z.object({
+// Was previously its own hand-rolled schema (startAt/endAt only, defaulting
+// to a hardcoded 7 days when absent) instead of the shared withDateRange -
+// meaning it silently ignored sinceMs/startDate/endDate rather than
+// rejecting or honoring them. Switched to match the sibling
+// overview/pageviews and overview/top-pages routes, which already used
+// withDateRange. The dashboard frontend (useWebsiteOverviewQuery) always
+// sends startAt+endAt explicitly, so making the range mandatory here does
+// not change its behavior.
+const schema = withDateRange({
   teamId: z.uuid().optional(),
-  startAt: z.coerce.number().int().optional(),
-  endAt: z.coerce.number().int().optional(),
-  timezone: timezoneParam.optional(),
 });
 
 export async function GET(request: Request) {
@@ -32,15 +36,7 @@ export async function GET(request: Request) {
     ? await getTeamWebsites(teamId, { pageSize: -1 })
     : await getUserWebsites(auth.user.id, { pageSize: -1 });
 
-  const timezone = query.timezone || 'UTC';
-  const defaultRange = parseDateRange('7day', undefined, undefined, timezone);
-  const hasDateRange = query.startAt != null && query.endAt != null;
-  const startDate = hasDateRange
-    ? new Date(query.startAt)
-    : fromZonedTime(defaultRange.startDate, timezone);
-  const endDate = hasDateRange
-    ? new Date(query.endAt)
-    : fromZonedTime(defaultRange.endDate, timezone);
+  const { startDate, endDate } = getRequestDateRange(query);
 
   const { startDate: compareStartDate, endDate: compareEndDate } = getCompareDate(
     'prev',
