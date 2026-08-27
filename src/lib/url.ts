@@ -47,3 +47,13 @@ export function isValidUrl(url: string) {
     return false;
   }
 }
+
+// Resolves the externally-visible origin of the app from a request, honoring
+// a reverse proxy's forwarded headers when present.
+export function getBaseUrl(request: Request) {
+  const url = new URL(request.url);
+  const protocol = request.headers.get('x-forwarded-proto') || url.protocol.replace(':', '');
+  const host = request.headers.get('x-forwarded-host') || request.headers.get('host') || url.host;
+
+  return `${protocol}://${host}`;
+}

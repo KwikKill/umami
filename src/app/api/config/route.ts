@@ -1,4 +1,5 @@
 import { isRelationalOnly } from '@/lib/db';
+import { getOidcSettings } from '@/lib/oidc';
 import { parseRequest } from '@/lib/request';
 import { json } from '@/lib/response';
 
@@ -11,6 +12,8 @@ export async function GET(request: Request) {
     return error();
   }
 
+  const oidcSettings = getOidcSettings();
+
   return json({
     cloudMode: !!process.env.CLOUD_MODE,
     faviconUrl: process.env.FAVICON_URL,
@@ -21,5 +24,7 @@ export async function GET(request: Request) {
     telemetryDisabled: !!process.env.DISABLE_TELEMETRY,
     trackerScriptName: process.env.TRACKER_SCRIPT_NAME,
     updatesDisabled: !!process.env.DISABLE_UPDATES,
+    ssoEnabled: !!oidcSettings,
+    ssoButtonLabel: oidcSettings?.buttonLabel,
   });
 }

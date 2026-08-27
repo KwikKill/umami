@@ -502,6 +502,8 @@
     "two-factor-backup-description": "If you lose access to your authenticator app, you can use one of these one-time backup codes to sign in. Save them somewhere safe; they will not be shown again.",
     "two-factor-backup-codes-once": "Keep these codes safe. Each code can only be used once.",
     "two-factor-login-description": "Enter the 6-digit code from your authenticator app.",
+    "sso-login-button": "Sign in with {provider}",
+    "sso-login-error": "Sign-in failed ({code}). Contact your administrator if this continues.",
     "two-factor-disable-description": "To confirm, enter your password and a verification code from your authenticator app.",
     "two-factor-required-message": "Two-factor authentication is required for your account and cannot be disabled. Contact your administrator for help.",
     "two-factor-override-note": "Per-user and per-team 2FA settings are overridden while global 2FA is enabled.",

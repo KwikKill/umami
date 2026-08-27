@@ -12,6 +12,8 @@ export type Config = {
   telemetryDisabled: boolean;
   trackerScriptName?: string;
   updatesDisabled: boolean;
+  ssoEnabled: boolean;
+  ssoButtonLabel?: string;
 };
 
 export function useConfig(): Config {

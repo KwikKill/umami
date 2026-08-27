@@ -1,4 +1,7 @@
 import {
+  Alert,
+  AlertTitle,
+  Button,
   Column,
   Form,
   FormButtons,
@@ -7,17 +10,22 @@ import {
   Heading,
   Icon,
   PasswordField,
+  Separator,
   TextField,
 } from '@umami/react-zen';
-import { useRouter } from 'next/navigation';
-import { useMessages, useUpdateQuery } from '@/components/hooks';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useConfig, useMessages, useUpdateQuery } from '@/components/hooks';
 import { Logo } from '@/components/svg';
+import { getApiUrl } from '@/lib/api-url';
 import { setClientAuthToken } from '@/lib/client';
 import { setUser } from '@/store/app';
 
 export function LoginForm() {
-  const { t, labels, getErrorMessage } = useMessages();
+  const { t, labels, messages, getErrorMessage } = useMessages();
   const router = useRouter();
+  const config = useConfig();
+  const searchParams = useSearchParams();
+  const ssoError = searchParams.get('ssoError');
   const { mutateAsync, error } = useUpdateQuery('/auth/login');
 
   const handleSubmit = async (data: any) => {
@@ -35,12 +43,21 @@ export function LoginForm() {
     });
   };
 
+  const handleSsoLogin = () => {
+    window.location.href = getApiUrl('/auth/oidc/login');
+  };
+
   return (
     <Column justifyContent="center" alignItems="center" gap="6">
       <Icon size="lg">
         <Logo />
       </Icon>
       <Heading>umami</Heading>
+      {ssoError && (
+        <Alert variant="danger" style={{ minWidth: 300 }}>
+          <AlertTitle>{t(messages.ssoLoginError, { code: ssoError })}</AlertTitle>
+        </Alert>
+      )}
       <Form onSubmit={handleSubmit} error={getErrorMessage(error)} style={{ minWidth: 300 }}>
         <FormField
           label={t(labels.username)}
@@ -70,6 +87,14 @@ export function LoginForm() {
           </FormSubmitButton>
         </FormButtons>
       </Form>
+      {config?.ssoEnabled && (
+        <Column gap="4" style={{ minWidth: 300 }}>
+          <Separator orientation="horizontal" />
+          <Button onPress={handleSsoLogin} style={{ width: '100%' }}>
+            {t(messages.ssoLoginButton, { provider: config.ssoButtonLabel })}
+          </Button>
+        </Column>
+      )}
     </Column>
   );
 }

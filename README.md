@@ -28,6 +28,7 @@ Unlike upstream, development here happens directly on a single `master` branch: 
 - **Accurate SPA bounce & duration tracking**: a lightweight heartbeat ping keeps long single-page-app sessions from being misreported as bounces or under-timed.
 - **Chart annotations**: pin notes (deployments, incidents, campaigns...) directly on a website's traffic chart, with hover tooltips and click-to-edit.
 - **API keys** (`Settings → Security`): generate keys scoped to `read` and/or `write` permissions, usable against both the REST API and the MCP server with the same `Authorization: Bearer` header as a session token. Keys can be rotated (new secret, same name/permissions) without disrupting integrations that just need to know a key exists.
+- **SSO login (OpenID Connect)**: sign in via an external identity provider such as [Authentik](https://goauthentik.io), Keycloak, or any standards-compliant OIDC issuer, alongside the normal username/password login. Accounts can be auto-provisioned on first login or restricted to admin-linked accounts only.
 - **MCP server** (`/api/mcp`): exposes Umami to LLM agents over the [Model Context Protocol](https://modelcontextprotocol.io): list/create websites, fetch tracking snippets, and pull single-site or cross-site stats and top-pages. Authenticated the same way as the REST API (session token or API key), scoped by the same read/write permissions.
 - **Relative date ranges** (`?sinceMs=N`): every stats/events/sessions endpoint that takes a date range (per-website and the cross-site `/api/websites/overview*` routes alike) now also accepts `sinceMs` (milliseconds, same unit/granularity as `startAt`/`endAt`) as an alternative to `startAt`+`endAt` or `startDate`+`endDate` - the API computes "now" and "now minus sinceMs" itself, so callers don't have to compute an absolute range client-side.
 - **GHCR-based CI/CD**: every push to `master` runs the test suite, builds a `linux/amd64` image, and publishes it to `ghcr.io/kwikkill/umami`, with an automatic cleanup job keeping the 10 most recent image versions.
@@ -72,6 +73,22 @@ For example, `API_URL=/internal-api` or `API_URL=https://api.example.com/api`.
 Optional: set `TWO_FACTOR_ENCRYPTION_KEY` to a 64-character hex string to enable two-factor
 authentication. Generate one with `openssl rand -hex 32`. Two-factor authentication is unavailable
 and cannot be required until this key is set.
+
+Optional: enable SSO login against an external OpenID Connect provider (e.g. [Authentik](https://goauthentik.io)) by setting:
+
+```bash
+OIDC_ISSUER=https://auth.example.com/application/o/umami/
+OIDC_CLIENT_ID=umami
+OIDC_CLIENT_SECRET=replace-me
+```
+
+A "Sign in with ..." button then appears on the login page alongside the normal username/password form. A few more variables are optional:
+
+- `OIDC_SCOPES` — defaults to `openid profile email`.
+- `OIDC_BUTTON_LABEL` — text shown on the login button, defaults to `SSO`.
+- `OIDC_DEFAULT_ROLE` — role given to accounts created on first SSO login, one of `admin`, `user` (default), `view-only`.
+- `OIDC_DISABLE_JIT=true` — reject sign-in unless an admin has already linked the account, instead of auto-creating one on first login.
+- `OIDC_ALLOW_INSECURE=true` — allow a plain-HTTP issuer. Only ever useful when testing against a local provider; never set this in production.
 
 The connection URL format:
 

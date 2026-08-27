@@ -1,15 +1,8 @@
 import { createMcpHandler } from '@modelcontextprotocol/server';
 import { checkAuth } from '@/lib/auth';
 import { unauthorized } from '@/lib/response';
+import { getBaseUrl } from '@/lib/url';
 import { buildMcpServer } from './tools';
-
-function getBaseUrl(request: Request) {
-  const url = new URL(request.url);
-  const protocol = request.headers.get('x-forwarded-proto') || url.protocol.replace(':', '');
-  const host = request.headers.get('x-forwarded-host') || request.headers.get('host') || url.host;
-
-  return `${protocol}://${host}`;
-}
 
 async function handleRequest(request: Request): Promise<Response> {
   const auth = await checkAuth(request);
