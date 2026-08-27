@@ -1,4 +1,5 @@
 import { isRelationalOnly } from '@/lib/db';
+import { getOidcSettings } from '@/lib/oidc';
 
 export type Config = {
   cloudMode: boolean;
@@ -10,6 +11,8 @@ export type Config = {
   telemetryDisabled: boolean;
   trackerScriptName?: string;
   updatesDisabled: boolean;
+  ssoEnabled: boolean;
+  ssoButtonLabel?: string;
 };
 
 /**
@@ -17,6 +20,8 @@ export type Config = {
  * Must be called at request time (not build time) so Docker/runtime env is honored.
  */
 export function getConfig(): Config {
+  const oidc = getOidcSettings();
+
   return {
     cloudMode: !!process.env.CLOUD_MODE,
     faviconUrl: process.env.FAVICON_URL,
@@ -27,5 +32,7 @@ export function getConfig(): Config {
     telemetryDisabled: !!process.env.DISABLE_TELEMETRY,
     trackerScriptName: process.env.TRACKER_SCRIPT_NAME,
     updatesDisabled: !!process.env.DISABLE_UPDATES,
+    ssoEnabled: !!oidc,
+    ssoButtonLabel: oidc?.buttonLabel,
   };
 }

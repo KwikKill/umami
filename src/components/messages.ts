@@ -511,6 +511,8 @@ export const messages: Record<string, string> = {
   twoFactorBackupDescription: 'message.two-factor-backup-description',
   twoFactorBackupCodesOnce: 'message.two-factor-backup-codes-once',
   twoFactorLoginDescription: 'message.two-factor-login-description',
+  ssoLoginButton: 'message.sso-login-button',
+  ssoLoginError: 'message.sso-login-error',
   twoFactorDisableDescription: 'message.two-factor-disable-description',
   twoFactorRequiredMessage: 'message.two-factor-required-message',
   twoFactorOverrideNote: 'message.two-factor-override-note',

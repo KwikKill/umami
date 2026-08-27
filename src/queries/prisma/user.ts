@@ -61,6 +61,10 @@ export async function getUserByUsername(username: string, options: GetUserOption
   return findUser({ where: { username: username.toLowerCase() } }, options);
 }
 
+export async function getUserBySsoSubject(ssoSubject: string, options: GetUserOptions = {}) {
+  return findUser({ where: { ssoSubject } }, options);
+}
+
 export async function getUsers(
   criteria: UserFindManyArgs,
   filters: QueryFilters = {},
@@ -92,6 +96,7 @@ export async function createUser(data: {
   username: string;
   password: string;
   role: Role;
+  ssoSubject?: string;
 }) {
   return prisma.client.user.create({
     data,

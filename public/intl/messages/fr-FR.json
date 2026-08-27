@@ -512,6 +512,8 @@
     "two-factor-backup-description": "Si vous perdez l’accès à votre application d’authentification, vous pouvez utiliser l’un de ces codes de récupération pour vous connecter. Enregistrez-les à un endroit sûr ; ils ne seront pas affichés à nouveau.",
     "two-factor-backup-codes-once": "Gardez ces codes en lieu sûr. Chaque code ne peut être utilisé qu’une seule fois.",
     "two-factor-login-description": "Saisissez le code à 6 chiffres de votre application d’authentification.",
+    "sso-login-button": "Se connecter avec {provider}",
+    "sso-login-error": "La connexion a échoué ({code}). Contactez votre administrateur si le problème persiste.",
     "two-factor-disable-description": "Pour confirmer, saisissez votre mot de passe et un code de vérification provenant de votre application d’authentification.",
     "two-factor-required-message": "L’authentification à deux facteurs est obligatoire pour votre compte et ne peut pas être désactivée. Contactez votre administrateur pour obtenir de l’aide.",
     "two-factor-override-note": "Les paramètres d’authentification à deux facteurs au niveau de l’utilisateur et de l’équipe sont ignorés lorsque l’authentification à deux facteurs est activée pour tous les utilisateurs.",

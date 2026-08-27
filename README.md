@@ -26,6 +26,7 @@ Unlike upstream, development here happens directly on a single `master` branch: 
 
 - **Cross-site dashboard** (`/dashboard`): aggregated stats across every registered website: combined totals, a composite time-series chart (one color per site), a per-site table with trend indicators, and a cross-site top-pages leaderboard, all with period-over-period comparisons. It replaces upstream's customizable dashboard board; per-site boards are still available under Boards.
 - **Accurate SPA bounce & duration tracking**: the tracker sends a lightweight heartbeat every 15 seconds while the page is visible, so long single-page-app visits are no longer reported as bounces or under-timed. A heartbeat only extends a visit opened by a pageview and is never counted as a pageview or an event. Disable it per site with `data-heartbeat="false"` on the tracking script.
+- **SSO login (OpenID Connect)**: sign in via an external identity provider such as [Authentik](https://goauthentik.io), Keycloak, or any standards-compliant OIDC issuer, alongside the normal username/password login. Accounts can be auto-provisioned on first login or restricted to admin-linked accounts only. Umami's own two-factor rules still apply to SSO sign-ins. See [Configure Umami](#configure-umami).
 - **GHCR-based CI/CD**: every push to `master` runs the test suite, builds a `linux/amd64` image, and publishes it to `ghcr.io/kwikkill/umami`, with an automatic cleanup job keeping the 10 most recent image versions.
 
 For everything not listed above (general configuration, tracking, reports, self-hosting concepts) the upstream [umami.is/docs](https://umami.is/docs/) still applies.
@@ -61,6 +62,22 @@ Create an `.env` file with the following:
 DATABASE_URL=connection-url
 APP_SECRET=random-string  # generate with: openssl rand -hex 32
 ```
+
+Optional: enable SSO login against an external OpenID Connect provider (e.g. [Authentik](https://goauthentik.io)) by setting:
+
+```bash
+OIDC_ISSUER=https://auth.example.com/application/o/umami/
+OIDC_CLIENT_ID=umami
+OIDC_CLIENT_SECRET=replace-me
+```
+
+Register `https://<your-umami-host><BASE_PATH>/api/auth/oidc/callback` as the redirect URI at the provider. A "Sign in with ..." button then appears on the login page alongside the normal username/password form. A few more variables are optional:
+
+- `OIDC_SCOPES`: defaults to `openid profile email`.
+- `OIDC_BUTTON_LABEL`: text shown on the login button, defaults to `SSO`.
+- `OIDC_DEFAULT_ROLE`: role given to accounts created on first SSO login, one of `admin`, `user` (default), `view-only`.
+- `OIDC_DISABLE_JIT=true`: reject sign-in unless the account is already linked (its `sso_subject` column holds the provider's `sub` claim), instead of auto-creating one on first login.
+- `OIDC_ALLOW_INSECURE=true`: allow a plain-HTTP issuer. Only useful when testing against a local provider; never set this in production.
 
 The connection URL format:
 

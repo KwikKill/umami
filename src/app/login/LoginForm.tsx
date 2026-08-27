@@ -1,4 +1,7 @@
 import {
+  Alert,
+  AlertTitle,
+  Button,
   Column,
   Form,
   FormButtons,
@@ -7,19 +10,49 @@ import {
   Heading,
   Icon,
   PasswordField,
+  Separator,
   TextField,
 } from '@umami/react-zen';
 import { useRouter } from 'next/navigation';
-import { useMessages, useUpdateQuery } from '@/components/hooks';
+import { useEffect, useState } from 'react';
+import { useConfig, useMessages, useUpdateQuery } from '@/components/hooks';
 import { Logo } from '@/components/svg';
+import { getApiUrl } from '@/lib/api-url';
 import { setClientAuthToken } from '@/lib/client';
 import { consumeReturnUrl } from '@/lib/return-url';
 import { setUser } from '@/store/app';
 
 export function LoginForm() {
-  const { t, labels, getErrorMessage } = useMessages();
+  const { t, labels, messages, getErrorMessage } = useMessages();
   const router = useRouter();
+  const config = useConfig();
+  const [ssoError, setSsoError] = useState<string | null>(null);
   const { mutateAsync, error } = useUpdateQuery('/auth/login');
+
+  // The OIDC callback (/api/auth/oidc/callback) hands its result back in the URL
+  // fragment, which never reaches the server or the reverse proxy access logs.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.hash.slice(1));
+    const token = params.get('sso-token');
+    const partialToken = params.get('sso-2fa');
+    const errorCode = params.get('sso-error');
+
+    if (!token && !partialToken && !errorCode) {
+      return;
+    }
+
+    window.history.replaceState(null, '', window.location.pathname + window.location.search);
+
+    if (token) {
+      setClientAuthToken(token);
+      router.push(consumeReturnUrl() ?? '/');
+    } else if (partialToken) {
+      sessionStorage.setItem('umami.partial-token', partialToken);
+      router.push('/login/two-factor');
+    } else {
+      setSsoError(errorCode);
+    }
+  }, [router]);
 
   const handleSubmit = async (data: any) => {
     await mutateAsync(data, {
@@ -36,12 +69,21 @@ export function LoginForm() {
     });
   };
 
+  const handleSsoLogin = () => {
+    window.location.href = getApiUrl('/auth/oidc/login');
+  };
+
   return (
     <Column justifyContent="center" alignItems="center" gap="6">
       <Icon size="lg">
         <Logo />
       </Icon>
       <Heading>umami</Heading>
+      {ssoError && (
+        <Alert variant="danger" style={{ minWidth: 300 }}>
+          <AlertTitle>{t(messages.ssoLoginError, { code: ssoError })}</AlertTitle>
+        </Alert>
+      )}
       <Form
         onSubmit={handleSubmit}
         error={getErrorMessage(error)}
@@ -76,6 +118,14 @@ export function LoginForm() {
           </FormSubmitButton>
         </FormButtons>
       </Form>
+      {config?.ssoEnabled && (
+        <Column gap="4" style={{ minWidth: 300 }}>
+          <Separator orientation="horizontal" />
+          <Button onPress={handleSsoLogin} style={{ width: '100%' }}>
+            {t(messages.ssoLoginButton, { provider: config.ssoButtonLabel })}
+          </Button>
+        </Column>
+      )}
     </Column>
   );
 }
