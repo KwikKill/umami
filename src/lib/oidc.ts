@@ -1,6 +1,7 @@
-import { allowInsecureRequests, discovery } from 'openid-client';
 import type { Configuration } from 'openid-client';
+import { allowInsecureRequests, discovery } from 'openid-client';
 import { ROLES } from '@/lib/constants';
+import { getBaseUrl } from '@/lib/get-base-url';
 import type { Role } from '@/lib/types';
 
 const VALID_DEFAULT_ROLES: string[] = [ROLES.admin, ROLES.user, ROLES.viewOnly];
@@ -8,6 +9,7 @@ const VALID_DEFAULT_ROLES: string[] = [ROLES.admin, ROLES.user, ROLES.viewOnly];
 // Short-lived, httpOnly cookie carrying the PKCE verifier/state/nonce between
 // the /api/auth/oidc/login redirect and the /api/auth/oidc/callback request.
 export const OIDC_STATE_COOKIE = 'umami.oidc-state';
+export const OIDC_STATE_COOKIE_PATH = `${(process.env.BASE_PATH || '').replace(/\/+$/, '')}/api/auth/oidc`;
 
 export interface OidcSettings {
   issuer: string;
@@ -46,6 +48,14 @@ export function getOidcSettings(): OidcSettings | null {
 
 export function isOidcEnabled() {
   return !!getOidcSettings();
+}
+
+// Externally visible URL of an app path, honoring the reverse proxy's forwarded
+// headers and BASE_PATH. Used for the redirect URI registered at the provider.
+export function getAppUrl(request: Request, path: string) {
+  const basePath = (process.env.BASE_PATH || '').replace(/\/+$/, '');
+
+  return `${getBaseUrl(request.headers).origin}${basePath}${path}`;
 }
 
 // Authorization Server Metadata discovery involves a network round-trip, so

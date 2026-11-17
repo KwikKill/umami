@@ -16,7 +16,7 @@ export function OverviewMetricsBar({
   isFetching?: boolean;
   error?: unknown;
 }) {
-  const { t, labels, getErrorMessage } = useMessages();
+  const { t, labels } = useMessages();
   const { totals, websites } = data || {};
 
   const metrics = totals
@@ -38,7 +38,9 @@ export function OverviewMetricsBar({
         },
         {
           label: t(labels.bounceRate),
-          value: totals.visits ? (Math.min(totals.visits, totals.bounces) / totals.visits) * 100 : 0,
+          value: totals.visits
+            ? (Math.min(totals.visits, totals.bounces) / totals.visits) * 100
+            : 0,
           formatValue: n => `${Math.round(+n)}%`,
         },
         {
@@ -59,7 +61,7 @@ export function OverviewMetricsBar({
       data={metrics}
       isLoading={isLoading}
       isFetching={isFetching}
-      error={getErrorMessage(error)}
+      error={error}
       minHeight="136px"
     >
       <MetricsBar>

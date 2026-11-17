@@ -1,26 +1,46 @@
-import { z } from 'zod';
 import { parseRequest } from '@/lib/request';
 import { json, notFound, ok, unauthorized } from '@/lib/response';
-import { canUpdateWebsite } from '@/permissions';
+import { annotationSchema } from '@/lib/schema';
+import { canUpdateWebsite, canViewSharedWebsiteFilters } from '@/permissions';
 import { deleteAnnotation, getWebsiteAnnotation, updateAnnotation } from '@/queries/prisma';
 
-export async function POST(
+export async function GET(
   request: Request,
   { params }: { params: Promise<{ websiteId: string; annotationId: string }> },
 ) {
-  const schema = z.object({
-    date: z.coerce.date(),
-    text: z.string().trim().min(1).max(500),
-  });
-
-  const { auth, body, error } = await parseRequest(request, schema);
+  const { auth, error } = await parseRequest(request);
 
   if (error) {
     return error();
   }
 
   const { websiteId, annotationId } = await params;
-  const { date, text } = body;
+
+  if (!(await canViewSharedWebsiteFilters(auth, websiteId))) {
+    return unauthorized();
+  }
+
+  const annotation = await getWebsiteAnnotation(websiteId, annotationId);
+
+  if (!annotation) {
+    return notFound();
+  }
+
+  return json(annotation);
+}
+
+export async function POST(
+  request: Request,
+  { params }: { params: Promise<{ websiteId: string; annotationId: string }> },
+) {
+  const { auth, body, error } = await parseRequest(request, annotationSchema);
+
+  if (error) {
+    return error();
+  }
+
+  const { websiteId, annotationId } = await params;
+  const { date, allDay, note } = body;
 
   if (!(await canUpdateWebsite(auth, websiteId))) {
     return unauthorized();
@@ -32,7 +52,7 @@ export async function POST(
     return notFound();
   }
 
-  const result = await updateAnnotation(annotationId, { date, text });
+  const result = await updateAnnotation(annotationId, { date, allDay, note });
 
   return json(result);
 }

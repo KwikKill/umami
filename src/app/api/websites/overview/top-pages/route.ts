@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { getCompareDate } from '@/lib/date';
-import { getRequestDateRange, parseRequest } from '@/lib/request';
+import { getRequestDateRange, parseRequest, resolvePeriodDateRange } from '@/lib/request';
 import { json, unauthorized } from '@/lib/response';
 import { withDateRange } from '@/lib/schema';
 import { canViewTeam } from '@/permissions';
@@ -29,7 +29,7 @@ export async function GET(request: Request) {
     ? await getTeamWebsites(teamId, { pageSize: -1 })
     : await getUserWebsites(auth.user.id, { pageSize: -1 });
 
-  const { startDate, endDate } = getRequestDateRange(query);
+  const { startDate, endDate } = getRequestDateRange(resolvePeriodDateRange(query));
   const { startDate: compareStartDate, endDate: compareEndDate } = getCompareDate(
     'prev',
     startDate,

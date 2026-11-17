@@ -6,7 +6,9 @@ import type { QueryFilters } from '@/lib/types';
 
 const FUNCTION_NAME = 'getWeeklyTraffic';
 
-export async function getWeeklyTraffic(...args: [websiteId: string, filters: QueryFilters]) {
+export async function getWeeklyTraffic(
+  ...args: [websiteId: string, filters: QueryFilters]
+): Promise<number[][]> {
   return runQuery({
     [PRISMA]: () => relationalQuery(...args),
     [CLICKHOUSE]: () => clickhouseQuery(...args),
@@ -33,7 +35,7 @@ async function relationalQuery(websiteId: string, filters: QueryFilters) {
     ${joinSessionQuery}
     where website_event.website_id = {{websiteId::uuid}}
       and website_event.created_at between {{startDate}} and {{endDate}}
-      and website_event.event_type NOT IN (2, 5)
+      and website_event.event_type NOT IN (2, 5, 6)
       ${filterQuery}
     group by time
     order by 1
@@ -63,7 +65,7 @@ async function clickhouseQuery(websiteId: string, filters: QueryFilters) {
     ${excludeBounceQuery}
     where website_id = {websiteId:UUID}
       and created_at between {startDate:DateTime64} and {endDate:DateTime64}
-      and event_type NOT IN (2, 5)
+      and event_type NOT IN (2, 5, 6)
       ${filterQuery}
     group by time
     order by time
@@ -78,7 +80,7 @@ async function clickhouseQuery(websiteId: string, filters: QueryFilters) {
     ${excludeBounceQuery}
     where website_id = {websiteId:UUID}
       and created_at between {startDate:DateTime64} and {endDate:DateTime64}
-      and event_type NOT IN (2, 5)
+      and event_type NOT IN (2, 5, 6)
       ${filterQuery}
     group by time
     order by time
@@ -88,8 +90,8 @@ async function clickhouseQuery(websiteId: string, filters: QueryFilters) {
   return rawQuery(sql, queryParams, FUNCTION_NAME).then(formatResults);
 }
 
-function formatResults(data: any) {
-  const days = [];
+function formatResults(data: any): number[][] {
+  const days: number[][] = [];
 
   for (let i = 0; i < 7; i++) {
     days.push([]);

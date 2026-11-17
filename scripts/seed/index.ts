@@ -397,7 +397,9 @@ export async function seed(config: SeedConfig): Promise<SeedResult> {
     const siteResults = [];
 
     for (const siteConfig of siteConfigs) {
-      siteResults.push(await generateSiteData(prisma, siteConfig, days, adminUserId, config.verbose));
+      siteResults.push(
+        await generateSiteData(prisma, siteConfig, days, adminUserId, config.verbose),
+      );
     }
 
     const result: SeedResult = {

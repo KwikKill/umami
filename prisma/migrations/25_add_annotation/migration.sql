@@ -1,21 +1,19 @@
 -- CreateTable
-CREATE TABLE "website_annotation" (
+CREATE TABLE "annotation" (
     "annotation_id" UUID NOT NULL,
     "website_id" UUID NOT NULL,
+    "user_id" UUID,
     "date" TIMESTAMPTZ(6) NOT NULL,
-    "text" VARCHAR(500) NOT NULL,
-    "created_by" UUID,
+    "all_day" BOOLEAN NOT NULL DEFAULT true,
+    "note" VARCHAR(500) NOT NULL,
     "created_at" TIMESTAMPTZ(6) DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMPTZ(6),
 
-    CONSTRAINT "website_annotation_pkey" PRIMARY KEY ("annotation_id")
+    CONSTRAINT "annotation_pkey" PRIMARY KEY ("annotation_id")
 );
 
 -- CreateIndex
-CREATE UNIQUE INDEX "website_annotation_annotation_id_key" ON "website_annotation"("annotation_id");
+CREATE UNIQUE INDEX "annotation_annotation_id_key" ON "annotation"("annotation_id");
 
 -- CreateIndex
-CREATE INDEX "website_annotation_website_id_idx" ON "website_annotation"("website_id");
-
--- CreateIndex
-CREATE INDEX "website_annotation_website_id_date_idx" ON "website_annotation"("website_id", "date");
+CREATE INDEX "annotation_website_id_date_idx" ON "annotation"("website_id", "date");

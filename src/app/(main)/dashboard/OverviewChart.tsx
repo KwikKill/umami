@@ -50,15 +50,18 @@ export function OverviewChart({ websites, teamId }: OverviewChartProps) {
 
     if (!rows) return;
 
-    const map = rows.reduce((obj: Record<string, { x: string; y: number }[]>, { websiteId, x, y }) => {
-      if (!obj[websiteId]) {
-        obj[websiteId] = [];
-      }
+    const map = rows.reduce(
+      (obj: Record<string, { x: string; y: number }[]>, { websiteId, x, y }) => {
+        if (!obj[websiteId]) {
+          obj[websiteId] = [];
+        }
 
-      obj[websiteId].push({ x, y });
+        obj[websiteId].push({ x, y });
 
-      return obj;
-    }, {});
+        return obj;
+      },
+      {},
+    );
 
     const keys = Object.keys(map);
 

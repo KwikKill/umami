@@ -14,13 +14,14 @@ jobs:
     name: Test
     runs-on: ubuntu-latest
     env:
+      APP_SECRET: "test-app-secret-not-for-production"
       DATABASE_URL: "postgresql://user:pass@localhost:5432/dummy"
       SKIP_DB_CHECK: 1
     steps:
       - uses: actions/checkout@v5
       - uses: pnpm/action-setup@v4
         with:
-          version: 10.15.1
+          version: 12.3.4
           run_install: false
       - name: Use Node.js 22
         uses: actions/setup-node@v4

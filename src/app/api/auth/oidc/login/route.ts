@@ -8,8 +8,13 @@ import {
 } from 'openid-client';
 import { secret } from '@/lib/crypto';
 import { createSecureToken } from '@/lib/jwt';
-import { getOidcClientConfig, getOidcSettings, OIDC_STATE_COOKIE } from '@/lib/oidc';
-import { getBaseUrl } from '@/lib/url';
+import {
+  getAppUrl,
+  getOidcClientConfig,
+  getOidcSettings,
+  OIDC_STATE_COOKIE,
+  OIDC_STATE_COOKIE_PATH,
+} from '@/lib/oidc';
 
 export async function GET(request: Request) {
   const settings = getOidcSettings();
@@ -23,7 +28,7 @@ export async function GET(request: Request) {
   try {
     config = await getOidcClientConfig();
   } catch {
-    return NextResponse.redirect(`${getBaseUrl(request)}/login?ssoError=provider-unreachable`);
+    return NextResponse.redirect(getAppUrl(request, '/login#sso-error=provider-unreachable'));
   }
 
   const codeVerifier = randomPKCECodeVerifier();
@@ -31,7 +36,7 @@ export async function GET(request: Request) {
   const state = randomState();
   const nonce = randomNonce();
 
-  const redirectUri = `${getBaseUrl(request)}/api/auth/oidc/callback`;
+  const redirectUri = getAppUrl(request, '/api/auth/oidc/callback');
 
   const authorizationUrl = buildAuthorizationUrl(config, {
     redirect_uri: redirectUri,
@@ -54,7 +59,7 @@ export async function GET(request: Request) {
     httpOnly: true,
     sameSite: 'lax',
     secure: process.env.NODE_ENV === 'production',
-    path: '/api/auth/oidc',
+    path: OIDC_STATE_COOKIE_PATH,
     maxAge: 600,
   });
 

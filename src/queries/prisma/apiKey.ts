@@ -1,36 +1,54 @@
-import type { Prisma } from '@/generated/prisma/client';
 import prisma from '@/lib/prisma';
 
-export async function getApiKeyByHash(keyHash: string) {
-  return prisma.client.apiKey.findUnique({ where: { keyHash } });
+export async function createApiKey(data: {
+  id: string;
+  userId: string;
+  name: string;
+  keyHash: string;
+  keyPrefix: string;
+}) {
+  return prisma.client.apiKey.create({
+    data,
+    select: {
+      id: true,
+      name: true,
+      keyPrefix: true,
+      createdAt: true,
+    },
+  });
 }
 
-export async function getUserApiKey(userId: string, apiKeyId: string) {
-  return prisma.client.apiKey.findFirst({ where: { id: apiKeyId, userId } });
+export async function getApiKeyByHash(keyHash: string) {
+  return prisma.client.apiKey.findUnique({
+    where: { keyHash },
+  });
 }
 
 export async function getUserApiKeys(userId: string) {
-  return prisma.client.apiKey.findMany({ where: { userId }, orderBy: { createdAt: 'desc' } });
+  return prisma.client.apiKey.findMany({
+    where: { userId },
+    select: {
+      id: true,
+      name: true,
+      keyPrefix: true,
+      lastUsedAt: true,
+      createdAt: true,
+    },
+    orderBy: { createdAt: 'desc' },
+  });
 }
 
-export async function createApiKey(data: Prisma.ApiKeyUncheckedCreateInput) {
-  return prisma.client.apiKey.create({ data });
+export async function deleteApiKey(id: string, userId: string) {
+  const { count } = await prisma.client.apiKey.deleteMany({
+    where: { id, userId },
+  });
+
+  return count;
 }
 
-export async function updateApiKeyLastUsed(apiKeyId: string) {
+export async function updateApiKeyLastUsed(id: string) {
   return prisma.client.apiKey.update({
-    where: { id: apiKeyId },
+    where: { id },
     data: { lastUsedAt: new Date() },
   });
-}
-
-export async function rotateApiKey(apiKeyId: string, data: { keyHash: string; keyPrefix: string }) {
-  return prisma.client.apiKey.update({
-    where: { id: apiKeyId },
-    data: { ...data, lastUsedAt: null },
-  });
-}
-
-export async function deleteApiKey(apiKeyId: string) {
-  return prisma.client.apiKey.delete({ where: { id: apiKeyId } });
 }

@@ -72,7 +72,7 @@ describe('getChannelMetrics postgres branch', () => {
     expect(query).toContain('channels as');
     expect(query).toContain('visit_channels as');
     expect(query).toContain('where website_event.website_id = {{websiteId::uuid}}');
-    expect(query).toContain('and website_event.event_type NOT IN (2, 5)');
+    expect(query).toContain('and website_event.event_type NOT IN (2, 5, 6)');
     // parseFilters fragments are interpolated verbatim
     expect(query).toContain(parseFiltersResult.filterQuery);
     expect(query).toContain(parseFiltersResult.cohortQuery);
@@ -168,7 +168,7 @@ describe('getChannelMetrics clickhouse branch', () => {
 
     expect(query).toContain('WITH channels as');
     expect(query).toContain('where website_id = {websiteId:UUID}');
-    expect(query).toContain('and event_type NOT IN (2, 5)');
+    expect(query).toContain('and event_type NOT IN (2, 5, 6)');
     expect(query).toContain(
       "multiSearchAny(lower(utm_medium), ['cp', 'ppc', 'retargeting', 'paid'])",
     );

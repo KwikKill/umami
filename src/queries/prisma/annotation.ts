@@ -1,5 +1,14 @@
-import type { Prisma } from '@/generated/prisma/client';
+import type { Annotation, Prisma } from '@/generated/prisma/client';
 import prisma from '@/lib/prisma';
+import type { PageResult, QueryFilters } from '@/lib/types';
+
+export async function getAnnotation(annotationId: string) {
+  return prisma.client.annotation.findUnique({
+    where: {
+      id: annotationId,
+    },
+  });
+}
 
 export async function getWebsiteAnnotation(websiteId: string, annotationId: string) {
   return prisma.client.annotation.findFirst({
@@ -9,15 +18,37 @@ export async function getWebsiteAnnotation(websiteId: string, annotationId: stri
 
 export async function getWebsiteAnnotations(
   websiteId: string,
-  { startDate, endDate }: { startDate: Date; endDate: Date },
-) {
-  return prisma.client.annotation.findMany({
-    where: {
-      websiteId,
-      date: { gte: startDate, lte: endDate },
+  filters: QueryFilters & { startDate?: Date; endDate?: Date } = {},
+): Promise<PageResult<Annotation[]>> {
+  const { search, startDate, endDate } = filters;
+  const { getSearchParameters, pagedQuery } = prisma;
+
+  const where: Prisma.AnnotationWhereInput = {
+    websiteId,
+    ...(startDate &&
+      endDate && {
+        date: {
+          gte: startDate,
+          lte: endDate,
+        },
+      }),
+    ...getSearchParameters(search, [
+      {
+        note: 'contains',
+      },
+    ]),
+  };
+
+  return pagedQuery(
+    'annotation',
+    {
+      where,
+      orderBy: {
+        date: 'desc',
+      },
     },
-    orderBy: { date: 'asc' },
-  });
+    filters,
+  );
 }
 
 export async function createAnnotation(data: Prisma.AnnotationUncheckedCreateInput) {

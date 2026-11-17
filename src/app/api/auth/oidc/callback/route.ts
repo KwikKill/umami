@@ -2,12 +2,21 @@ import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 import { authorizationCodeGrant } from 'openid-client';
 import { saveAuth } from '@/lib/auth';
+import { PARTIAL_AUTH_TOKEN_TYPE } from '@/lib/constants';
 import { hash, secret, uuid } from '@/lib/crypto';
 import { createSecureToken, parseSecureToken } from '@/lib/jwt';
-import { getOidcClientConfig, getOidcSettings, OIDC_STATE_COOKIE } from '@/lib/oidc';
+import {
+  getAppUrl,
+  getOidcClientConfig,
+  getOidcSettings,
+  OIDC_STATE_COOKIE,
+  OIDC_STATE_COOKIE_PATH,
+} from '@/lib/oidc';
 import { hashPassword } from '@/lib/password';
+import prisma from '@/lib/prisma';
 import redis from '@/lib/redis';
-import { getBaseUrl } from '@/lib/url';
+import { isTwoFactorConfigured } from '@/lib/two-factor/crypto';
+import { getTwoFactorRequiredReason } from '@/lib/two-factor/policy';
 import { createUser, getUserBySsoSubject, getUserByUsername } from '@/queries/prisma';
 
 interface OidcStatePayload {
@@ -16,12 +25,20 @@ interface OidcStatePayload {
   nonce: string;
 }
 
-function redirectWithError(request: Request, code: string) {
-  const response = NextResponse.redirect(`${getBaseUrl(request)}/login?ssoError=${code}`);
+// The result is handed back to the login page in the URL fragment, which the
+// browser never sends to the server, so tokens stay out of access logs.
+function redirectToLogin(request: Request, fragment: Record<string, string>) {
+  const response = NextResponse.redirect(
+    getAppUrl(request, `/login#${new URLSearchParams(fragment).toString()}`),
+  );
 
-  response.cookies.delete(OIDC_STATE_COOKIE);
+  response.cookies.set(OIDC_STATE_COOKIE, '', { path: OIDC_STATE_COOKIE_PATH, maxAge: 0 });
 
   return response;
+}
+
+function redirectWithError(request: Request, code: string) {
+  return redirectToLogin(request, { 'sso-error': code });
 }
 
 // Finds a free username for a freshly-provisioned SSO account, in case the
@@ -72,7 +89,12 @@ export async function GET(request: NextRequest) {
   let tokens;
 
   try {
-    tokens = await authorizationCodeGrant(config, new URL(request.url), {
+    // request.url is the internal URL behind the reverse proxy: rebuild the
+    // public one so it matches the redirect_uri sent by /api/auth/oidc/login.
+    const callbackUrl = new URL(getAppUrl(request, '/api/auth/oidc/callback'));
+    callbackUrl.search = new URL(request.url).search;
+
+    tokens = await authorizationCodeGrant(config, callbackUrl, {
       pkceCodeVerifier: statePayload.codeVerifier,
       expectedState: statePayload.state,
       expectedNonce: statePayload.nonce,
@@ -124,25 +146,39 @@ export async function GET(request: NextRequest) {
     userRole = created.role;
   }
 
-  // Bind the token to the password hash, same as the password login flow, so
-  // it can't be replayed after the (unusable) local password is rotated.
-  const pwd = hash(passwordHash);
+  // Same 2FA rules as the password login (src/app/api/auth/login/route.ts):
+  // an enrolled user still has to pass the TOTP challenge, and a user required
+  // to enroll gets a session limited to the setup routes.
+  const cloudMode = !!process.env.CLOUD_MODE;
+  const twoFactor = !cloudMode
+    ? await prisma.client.twoFactorAuth.findUnique({ where: { userId } })
+    : null;
 
-  let token: string;
+  if (twoFactor?.isEnabled) {
+    if (!isTwoFactorConfigured()) {
+      return redirectWithError(request, 'two-factor-unavailable');
+    }
 
-  if (redis.enabled) {
-    token = await saveAuth({ userId, role: userRole, pwd });
-  } else {
-    token = createSecureToken({ userId, role: userRole, pwd }, secret());
+    const partialToken = createSecureToken({ userId, type: PARTIAL_AUTH_TOKEN_TYPE }, secret(), {
+      expiresIn: '5m',
+    });
+
+    return redirectToLogin(request, { 'sso-2fa': partialToken });
   }
 
-  // Reuses the existing SSO landing page (src/app/sso), which sets the
-  // client auth token and navigates to `url`.
-  const response = NextResponse.redirect(
-    `${getBaseUrl(request)}/sso?token=${encodeURIComponent(token)}&url=%2F`,
-  );
+  const twoFactorSetup =
+    !cloudMode && isTwoFactorConfigured() && !!(await getTwoFactorRequiredReason(userId));
 
-  response.cookies.delete(OIDC_STATE_COOKIE);
+  // Bind the token to the password hash, same as the password login flow, so
+  // it can't be replayed after the (unusable) local password is rotated.
+  const session = {
+    userId,
+    role: userRole,
+    pwd: hash(passwordHash),
+    ...(twoFactorSetup && { twoFactorSetup }),
+  };
 
-  return response;
+  const token = redis.enabled ? await saveAuth(session) : createSecureToken(session, secret());
+
+  return redirectToLogin(request, { 'sso-token': token });
 }

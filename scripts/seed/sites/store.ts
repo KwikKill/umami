@@ -26,7 +26,12 @@ export const storePages: PageConfig[] = [
     weight: 0.1,
     avgTimeOnPage: 60,
   })),
-  { path: '/product/wireless-headphones', title: 'Wireless Headphones', weight: 0.07, avgTimeOnPage: 75 },
+  {
+    path: '/product/wireless-headphones',
+    title: 'Wireless Headphones',
+    weight: 0.07,
+    avgTimeOnPage: 75,
+  },
   { path: '/product/running-shoes', title: 'Running Shoes', weight: 0.07, avgTimeOnPage: 75 },
   { path: '/product/desk-lamp', title: 'Desk Lamp', weight: 0.05, avgTimeOnPage: 60 },
 ];

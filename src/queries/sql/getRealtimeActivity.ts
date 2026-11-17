@@ -2,11 +2,13 @@ import clickhouse from '@/lib/clickhouse';
 import { EVENT_TYPE } from '@/lib/constants';
 import { CLICKHOUSE, PRISMA, runQuery } from '@/lib/db';
 import prisma from '@/lib/prisma';
-import type { QueryFilters } from '@/lib/types';
+import type { QueryFilters, RealtimeActivity } from '@/lib/types';
 
 const FUNCTION_NAME = 'getRealtimeActivity';
 
-export async function getRealtimeActivity(...args: [websiteId: string, filters: QueryFilters]) {
+export async function getRealtimeActivity(
+  ...args: [websiteId: string, filters: QueryFilters]
+): Promise<RealtimeActivity[]> {
   return runQuery({
     [PRISMA]: () => relationalQuery(...args),
     [CLICKHOUSE]: () => clickhouseQuery(...args),
@@ -39,7 +41,7 @@ async function relationalQuery(websiteId: string, filters: QueryFilters) {
       on session.session_id = website_event.session_id
         and session.website_id = website_event.website_id
     where website_event.website_id = {{websiteId::uuid}}
-      and website_event.event_type != ${EVENT_TYPE.performance}
+      and website_event.event_type NOT IN (${EVENT_TYPE.performance}, ${EVENT_TYPE.heartbeat})
     ${filterQuery}
     ${dateQuery}
     order by website_event.created_at desc
@@ -50,7 +52,10 @@ async function relationalQuery(websiteId: string, filters: QueryFilters) {
   );
 }
 
-async function clickhouseQuery(websiteId: string, filters: QueryFilters): Promise<{ x: number }> {
+async function clickhouseQuery(
+  websiteId: string,
+  filters: QueryFilters,
+): Promise<RealtimeActivity[]> {
   const { rawQuery, parseFilters } = clickhouse;
   const { queryParams, filterQuery, cohortQuery, dateQuery } = parseFilters({
     ...filters,
@@ -73,7 +78,7 @@ async function clickhouseQuery(websiteId: string, filters: QueryFilters): Promis
         from website_event
         ${cohortQuery}
         where website_id = {websiteId:UUID}
-          and event_type != ${EVENT_TYPE.performance}
+          and event_type NOT IN (${EVENT_TYPE.performance}, ${EVENT_TYPE.heartbeat})
         ${filterQuery}
         ${dateQuery}
         order by createdAt desc

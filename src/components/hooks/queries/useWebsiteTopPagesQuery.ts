@@ -15,7 +15,10 @@ export interface WebsiteTopPage {
 export function useWebsiteTopPagesQuery({
   teamId,
   limit = 20,
-}: { teamId?: string; limit?: number } = {}) {
+}: {
+  teamId?: string;
+  limit?: number;
+} = {}) {
   const { get, useQuery } = useApi();
   const { startAt, endAt, timezone } = useDateParameters();
 

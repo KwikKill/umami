@@ -1,16 +1,21 @@
 import { z } from 'zod';
 import { uuid } from '@/lib/crypto';
-import { getQueryFilters, parseRequest } from '@/lib/request';
+import { parseRequest, resolvePeriodDateRange } from '@/lib/request';
 import { json, unauthorized } from '@/lib/response';
-import { withDateRange } from '@/lib/schema';
-import { canUpdateWebsite, canViewWebsiteSection } from '@/permissions';
+import { annotationSchema, pagingParams, searchParams, withPeriodDateRange } from '@/lib/schema';
+import { canUpdateWebsite, canViewSharedWebsiteFilters } from '@/permissions';
 import { createAnnotation, getWebsiteAnnotations } from '@/queries/prisma';
 
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ websiteId: string }> },
 ) {
-  const schema = withDateRange();
+  const schema = withPeriodDateRange({
+    startAt: z.coerce.number().optional(),
+    endAt: z.coerce.number().optional(),
+    ...searchParams,
+    ...pagingParams,
+  }, false);
 
   const { auth, query, error } = await parseRequest(request, schema);
 
@@ -19,14 +24,19 @@ export async function GET(
   }
 
   const { websiteId } = await params;
+  const { startAt, endAt, search, page, pageSize } = resolvePeriodDateRange(query);
 
-  if (!(await canViewWebsiteSection(auth, websiteId, ['overview', 'compare']))) {
+  if (!(await canViewSharedWebsiteFilters(auth, websiteId))) {
     return unauthorized();
   }
 
-  const { startDate, endDate } = await getQueryFilters(query, websiteId);
-
-  const annotations = await getWebsiteAnnotations(websiteId, { startDate, endDate });
+  const annotations = await getWebsiteAnnotations(websiteId, {
+    search,
+    page,
+    pageSize,
+    ...(startAt != null &&
+      endAt != null && { startDate: new Date(startAt), endDate: new Date(endAt) }),
+  });
 
   return json(annotations);
 }
@@ -35,19 +45,14 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ websiteId: string }> },
 ) {
-  const schema = z.object({
-    date: z.coerce.date(),
-    text: z.string().trim().min(1).max(500),
-  });
-
-  const { auth, body, error } = await parseRequest(request, schema);
+  const { auth, body, error } = await parseRequest(request, annotationSchema);
 
   if (error) {
     return error();
   }
 
   const { websiteId } = await params;
-  const { date, text } = body;
+  const { date, allDay, note } = body;
 
   if (!(await canUpdateWebsite(auth, websiteId))) {
     return unauthorized();
@@ -56,9 +61,10 @@ export async function POST(
   const result = await createAnnotation({
     id: uuid(),
     websiteId,
+    userId: auth.user.id,
     date,
-    text,
-    createdBy: auth.user.id,
+    allDay,
+    note,
   });
 
   return json(result);

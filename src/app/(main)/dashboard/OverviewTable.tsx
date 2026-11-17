@@ -23,20 +23,17 @@ export function OverviewTable({
   isFetching?: boolean;
   error?: unknown;
 }) {
-  const { t, labels, getErrorMessage } = useMessages();
+  const { t, labels } = useMessages();
   const { renderUrl } = useNavigation();
 
-  const rows = useMemo(
-    () => [...(data || [])].sort((a, b) => b.pageviews - a.pageviews),
-    [data],
-  );
+  const rows = useMemo(() => [...(data || [])].sort((a, b) => b.pageviews - a.pageviews), [data]);
 
   return (
     <LoadingPanel
       data={rows}
       isLoading={isLoading}
       isFetching={isFetching}
-      error={getErrorMessage(error)}
+      error={error}
       minHeight="200px"
     >
       <DataTable data={rows}>

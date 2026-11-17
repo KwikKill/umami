@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { getRequestDateRange, parseRequest } from '@/lib/request';
+import { getRequestDateRange, parseRequest, resolvePeriodDateRange } from '@/lib/request';
 import { json, unauthorized } from '@/lib/response';
 import { withDateRange } from '@/lib/schema';
 import { canViewTeam } from '@/permissions';
@@ -27,7 +27,7 @@ export async function GET(request: Request) {
     ? await getTeamWebsites(teamId, { pageSize: -1 })
     : await getUserWebsites(auth.user.id, { pageSize: -1 });
 
-  const { startDate, endDate, timezone, unit } = getRequestDateRange(query);
+  const { startDate, endDate, timezone, unit } = getRequestDateRange(resolvePeriodDateRange(query));
 
   const websiteIds = websites.map(website => website.id);
   const data = await getWebsiteListPageviews(websiteIds, { startDate, endDate, timezone, unit });

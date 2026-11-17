@@ -1,20 +1,14 @@
 import { z } from 'zod';
 import { getCompareDate } from '@/lib/date';
-import { getRequestDateRange, parseRequest } from '@/lib/request';
+import { getRequestDateRange, parseRequest, resolvePeriodDateRange } from '@/lib/request';
 import { json, unauthorized } from '@/lib/response';
 import { withDateRange } from '@/lib/schema';
 import { canViewTeam } from '@/permissions';
 import { getTeamWebsites, getUserWebsites } from '@/queries/prisma';
 import { getWebsiteListStats, WEBSITE_LIST_STATS_TOTAL_KEY } from '@/queries/sql';
 
-// Was previously its own hand-rolled schema (startAt/endAt only, defaulting
-// to a hardcoded 7 days when absent) instead of the shared withDateRange -
-// meaning it silently ignored sinceMs/startDate/endDate rather than
-// rejecting or honoring them. Switched to match the sibling
-// overview/pageviews and overview/top-pages routes, which already used
-// withDateRange. The dashboard frontend (useWebsiteOverviewQuery) always
-// sends startAt+endAt explicitly, so making the range mandatory here does
-// not change its behavior.
+// Fork: cross-site stats for the global dashboard. Takes startAt+endAt or an
+// upstream `period` (e.g. ?period=7d), like the sibling overview routes.
 const schema = withDateRange({
   teamId: z.uuid().optional(),
 });
@@ -36,7 +30,7 @@ export async function GET(request: Request) {
     ? await getTeamWebsites(teamId, { pageSize: -1 })
     : await getUserWebsites(auth.user.id, { pageSize: -1 });
 
-  const { startDate, endDate } = getRequestDateRange(query);
+  const { startDate, endDate } = getRequestDateRange(resolvePeriodDateRange(query));
 
   const { startDate: compareStartDate, endDate: compareEndDate } = getCompareDate(
     'prev',

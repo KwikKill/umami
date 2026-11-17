@@ -1,9 +1,9 @@
 import { z } from 'zod';
-import { API_KEY_PERMISSIONS, generateApiKey } from '@/lib/apiKey';
+import { generateApiKey, getApiKeyPrefix, hashApiKey, isApiKeyEnabled } from '@/lib/api-key';
 import { uuid } from '@/lib/crypto';
 import { parseRequest } from '@/lib/request';
-import { forbidden, json } from '@/lib/response';
-import { createApiKey, getUserApiKeys } from '@/queries/prisma';
+import { json, notFound } from '@/lib/response';
+import { createApiKey, getUserApiKeys } from '@/queries/prisma/apiKey';
 
 export async function GET(request: Request) {
   const { auth, error } = await parseRequest(request);
@@ -12,24 +12,16 @@ export async function GET(request: Request) {
     return error();
   }
 
-  const apiKeys = await getUserApiKeys(auth.user.id);
+  if (!isApiKeyEnabled()) {
+    return notFound();
+  }
 
-  return json(
-    apiKeys.map(({ id, name, keyPrefix, permissions, lastUsedAt, createdAt }) => ({
-      id,
-      name,
-      keyPrefix,
-      permissions,
-      lastUsedAt,
-      createdAt,
-    })),
-  );
+  return json(await getUserApiKeys(auth.user.id));
 }
 
 export async function POST(request: Request) {
   const schema = z.object({
-    name: z.string().trim().min(1).max(200),
-    permissions: z.array(z.enum(API_KEY_PERMISSIONS)).min(1),
+    name: z.string().trim().min(1).max(255),
   });
 
   const { auth, body, error } = await parseRequest(request, schema);
@@ -38,29 +30,20 @@ export async function POST(request: Request) {
     return error();
   }
 
-  // API keys can't be used to create or manage other API keys.
-  if (auth.apiKey) {
-    return forbidden();
+  if (!isApiKeyEnabled()) {
+    return notFound();
   }
 
-  const { name, permissions } = body;
-  const { key, keyHash, keyPrefix } = generateApiKey();
+  const key = generateApiKey();
 
   const apiKey = await createApiKey({
     id: uuid(),
     userId: auth.user.id,
-    name,
-    keyHash,
-    keyPrefix,
-    permissions,
+    name: body.name,
+    keyHash: hashApiKey(key),
+    keyPrefix: getApiKeyPrefix(key),
   });
 
-  return json({
-    id: apiKey.id,
-    name: apiKey.name,
-    keyPrefix: apiKey.keyPrefix,
-    permissions: apiKey.permissions,
-    createdAt: apiKey.createdAt,
-    key,
-  });
+  // The plaintext key is only returned once, at creation time.
+  return json({ ...apiKey, key });
 }

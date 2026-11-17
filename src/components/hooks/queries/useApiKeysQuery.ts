@@ -1,25 +1,20 @@
-import { keepPreviousData } from '@tanstack/react-query';
-import type { ReactQueryOptions } from '@/lib/types';
 import { useApi } from '../useApi';
 import { useModified } from '../useModified';
 
-export interface ApiKey {
+export interface ApiKeyData {
   id: string;
   name: string;
   keyPrefix: string;
-  permissions: string[];
   lastUsedAt: string | null;
   createdAt: string;
 }
 
-export function useApiKeysQuery(options?: ReactQueryOptions<ApiKey[]>) {
+export function useApiKeysQuery() {
   const { get, useQuery } = useApi();
   const { modified } = useModified('api-keys');
 
-  return useQuery<ApiKey[]>({
-    queryKey: ['me:api-keys', { modified }],
+  return useQuery<ApiKeyData[]>({
+    queryKey: ['api-keys', { modified }],
     queryFn: () => get('/me/api-keys'),
-    placeholderData: keepPreviousData,
-    ...options,
   });
 }

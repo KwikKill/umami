@@ -24,14 +24,12 @@ Unlike upstream, development here happens directly on a single `master` branch: 
 
 ### ✨ Added on top of upstream Umami
 
-- **Cross-site dashboard** (`/dashboard`): aggregated stats across every registered website: combined totals, a composite time-series chart (one color per site), a per-site table with trend indicators, and a cross-site top-pages leaderboard, all with period-over-period comparisons.
-- **Accurate SPA bounce & duration tracking**: a lightweight heartbeat ping keeps long single-page-app sessions from being misreported as bounces or under-timed.
-- **Chart annotations**: pin notes (deployments, incidents, campaigns...) directly on a website's traffic chart, with hover tooltips and click-to-edit.
-- **API keys** (`Settings → Security`): generate keys scoped to `read` and/or `write` permissions, usable against both the REST API and the MCP server with the same `Authorization: Bearer` header as a session token. Keys can be rotated (new secret, same name/permissions) without disrupting integrations that just need to know a key exists.
-- **SSO login (OpenID Connect)**: sign in via an external identity provider such as [Authentik](https://goauthentik.io), Keycloak, or any standards-compliant OIDC issuer, alongside the normal username/password login. Accounts can be auto-provisioned on first login or restricted to admin-linked accounts only.
-- **MCP server** (`/api/mcp`): exposes Umami to LLM agents over the [Model Context Protocol](https://modelcontextprotocol.io): list/create websites, fetch tracking snippets, and pull single-site or cross-site stats and top-pages. Authenticated the same way as the REST API (session token or API key), scoped by the same read/write permissions.
-- **Relative date ranges** (`?sinceMs=N`): every stats/events/sessions endpoint that takes a date range (per-website and the cross-site `/api/websites/overview*` routes alike) now also accepts `sinceMs` (milliseconds, same unit/granularity as `startAt`/`endAt`) as an alternative to `startAt`+`endAt` or `startDate`+`endDate` - the API computes "now" and "now minus sinceMs" itself, so callers don't have to compute an absolute range client-side.
+- **Cross-site dashboard** (`/dashboard`): aggregated stats across every registered website: combined totals, a composite time-series chart (one color per site), a per-site table with trend indicators, and a cross-site top-pages leaderboard, all with period-over-period comparisons. It replaces upstream's customizable dashboard board; per-site boards are still available under Boards.
+- **Accurate SPA bounce & duration tracking**: the tracker sends a lightweight heartbeat every 15 seconds while the page is visible, so long single-page-app visits are no longer reported as bounces or under-timed. A heartbeat only extends a visit opened by a pageview and is never counted as a pageview or an event. Disable it per site with `data-heartbeat="false"` on the tracking script.
+- **SSO login (OpenID Connect)**: sign in via an external identity provider such as [Authentik](https://goauthentik.io), Keycloak, or any standards-compliant OIDC issuer, alongside the normal username/password login. Accounts can be auto-provisioned on first login or restricted to admin-linked accounts only. Umami's own two-factor rules still apply to SSO sign-ins. See [Configure Umami](#configure-umami).
 - **GHCR-based CI/CD**: every push to `master` runs the test suite, builds a `linux/amd64` image, and publishes it to `ghcr.io/kwikkill/umami`, with an automatic cleanup job keeping the 10 most recent image versions.
+
+Earlier versions of this fork also shipped chart annotations, API keys, an MCP server and a `sinceMs` relative date range. Upstream now provides all four (annotations, `Settings > API keys`, the `/mcp` endpoint enabled with `MCP_ENABLED=1`, and the `period` query parameter such as `?period=7d`), so the fork uses upstream's versions. Existing annotations and API keys with write access were migrated; read-only keys were removed because upstream keys are not scoped.
 
 For everything not listed above (general configuration, tracking, reports, self-hosting concepts) the upstream [umami.is/docs](https://umami.is/docs/) still applies.
 
@@ -47,7 +45,7 @@ A detailed getting started guide can be found at [umami.is/docs](https://umami.i
 
 ### Requirements
 
-- A server with Node.js version 22+.
+- A server with Node.js version 20.19+ (22 LTS recommended).
 - A PostgreSQL database version v12.14+.
 
 ### Get the source code and install packages
@@ -64,15 +62,8 @@ Create an `.env` file with the following:
 
 ```bash
 DATABASE_URL=connection-url
+APP_SECRET=random-string  # generate with: openssl rand -hex 32
 ```
-
-Optional: set `API_URL` to change the base URL used by internal UI API calls.
-Relative paths are served under `BASE_PATH`; absolute URLs are proxied through the local `/api` route.
-For example, `API_URL=/internal-api` or `API_URL=https://api.example.com/api`.
-
-Optional: set `TWO_FACTOR_ENCRYPTION_KEY` to a 64-character hex string to enable two-factor
-authentication. Generate one with `openssl rand -hex 32`. Two-factor authentication is unavailable
-and cannot be required until this key is set.
 
 Optional: enable SSO login against an external OpenID Connect provider (e.g. [Authentik](https://goauthentik.io)) by setting:
 
@@ -82,13 +73,13 @@ OIDC_CLIENT_ID=umami
 OIDC_CLIENT_SECRET=replace-me
 ```
 
-A "Sign in with ..." button then appears on the login page alongside the normal username/password form. A few more variables are optional:
+Register `https://<your-umami-host><BASE_PATH>/api/auth/oidc/callback` as the redirect URI at the provider. A "Sign in with ..." button then appears on the login page alongside the normal username/password form. A few more variables are optional:
 
-- `OIDC_SCOPES` — defaults to `openid profile email`.
-- `OIDC_BUTTON_LABEL` — text shown on the login button, defaults to `SSO`.
-- `OIDC_DEFAULT_ROLE` — role given to accounts created on first SSO login, one of `admin`, `user` (default), `view-only`.
-- `OIDC_DISABLE_JIT=true` — reject sign-in unless an admin has already linked the account, instead of auto-creating one on first login.
-- `OIDC_ALLOW_INSECURE=true` — allow a plain-HTTP issuer. Only ever useful when testing against a local provider; never set this in production.
+- `OIDC_SCOPES`: defaults to `openid profile email`.
+- `OIDC_BUTTON_LABEL`: text shown on the login button, defaults to `SSO`.
+- `OIDC_DEFAULT_ROLE`: role given to accounts created on first SSO login, one of `admin`, `user` (default), `view-only`.
+- `OIDC_DISABLE_JIT=true`: reject sign-in unless the account is already linked (its `sso_subject` column holds the provider's `sub` claim), instead of auto-creating one on first login.
+- `OIDC_ALLOW_INSECURE=true`: allow a plain-HTTP issuer. Only useful when testing against a local provider; never set this in production.
 
 The connection URL format:
 
@@ -102,7 +93,7 @@ postgresql://username:mypassword@localhost:5432/mydb
 pnpm run build
 ```
 
-The build step will create tables in your database if you are installing for the first time. It will also create a login user with username **admin** and password **umami**.
+The build step will create tables in your database if you are installing for the first time. It will also create a login user with username **admin** and password **umami**. You will be required to change this password after signing in.
 
 ### Start the Application
 
@@ -111,6 +102,8 @@ pnpm run start
 ```
 
 By default, this will launch the application on `http://localhost:3000`. You will need to either [proxy](https://docs.nginx.com/nginx/admin-guide/web-server/reverse-proxy/) requests from your web server or change the [port](https://nextjs.org/docs/api-reference/cli#production) to serve the application directly.
+
+To bind to the `HOSTNAME` and `PORT` set in your `.env` file, start with `pnpm run start:env` instead.
 
 ---
 

@@ -6,13 +6,14 @@ import { Badge } from '@/components/common/Badge';
 import { PageBody } from '@/components/common/PageBody';
 import { PageHeader } from '@/components/common/PageHeader';
 import { Panel } from '@/components/common/Panel';
-import { useMessages, useTwoFactorStatusQuery } from '@/components/hooks';
+import { useConfig, useMessages, useTwoFactorStatusQuery } from '@/components/hooks';
 import { TwoFactorDisableModal } from '@/components/modals/TwoFactorDisableModal';
 import { TwoFactorSetupModal } from '@/components/modals/TwoFactorSetupModal';
-import { ApiKeysPanel } from './ApiKeysPanel';
+import { PasswordChangeButton } from './PasswordChangeButton';
 
 export function UserSecurityPage() {
   const { t, labels, messages } = useMessages();
+  const { cloudMode } = useConfig();
   const { data: status, isLoading } = useTwoFactorStatusQuery(true);
   const queryClient = useQueryClient();
   const [showSetup, setShowSetup] = useState(false);
@@ -47,6 +48,18 @@ export function UserSecurityPage() {
     <PageBody>
       <Column gap="6">
         <PageHeader title={t(labels.security)} />
+        {!cloudMode && (
+          <Panel>
+            <Column gap="4">
+              <Row alignItems="center" gap="3">
+                <Text weight="bold">{t(labels.password)}</Text>
+              </Row>
+              <Row>
+                <PasswordChangeButton />
+              </Row>
+            </Column>
+          </Panel>
+        )}
         <Panel>
           <Column gap="4">
             <Row alignItems="center" gap="3">
@@ -76,7 +89,7 @@ export function UserSecurityPage() {
                   />
                   <Text>{t(labels.twoFactorEnable)}</Text>
                 </Row>
-                  <Tooltip>{t(messages.twoFactorRequiredMessage)}</Tooltip>
+                <Tooltip>{t(messages.twoFactorRequiredMessage)}</Tooltip>
               </TooltipTrigger>
             ) : null}
 
@@ -109,7 +122,6 @@ export function UserSecurityPage() {
             )}
           </Column>
         </Panel>
-        <ApiKeysPanel />
       </Column>
 
       {showSetup && <TwoFactorSetupModal required={false} onClose={handleSetupClose} />}
