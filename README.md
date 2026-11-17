@@ -29,6 +29,8 @@ Unlike upstream, development here happens directly on a single `master` branch: 
 - **SSO login (OpenID Connect)**: sign in via an external identity provider such as [Authentik](https://goauthentik.io), Keycloak, or any standards-compliant OIDC issuer, alongside the normal username/password login. Accounts can be auto-provisioned on first login or restricted to admin-linked accounts only. Umami's own two-factor rules still apply to SSO sign-ins. See [Configure Umami](#configure-umami).
 - **GHCR-based CI/CD**: every push to `master` runs the test suite, builds a `linux/amd64` image, and publishes it to `ghcr.io/kwikkill/umami`, with an automatic cleanup job keeping the 10 most recent image versions.
 
+Earlier versions of this fork also shipped chart annotations, API keys, an MCP server and a `sinceMs` relative date range. Upstream now provides all four (annotations, `Settings > API keys`, the `/mcp` endpoint enabled with `MCP_ENABLED=1`, and the `period` query parameter such as `?period=7d`), so the fork uses upstream's versions. Existing annotations and API keys with write access were migrated; read-only keys were removed because upstream keys are not scoped.
+
 For everything not listed above (general configuration, tracking, reports, self-hosting concepts) the upstream [umami.is/docs](https://umami.is/docs/) still applies.
 
 ---
